@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { usePreferenceSettings } from "../contexts/PreferenceContext";
 import { useShelterData } from "../contexts/ShelterDataContext";
+import { useWeather } from "../contexts/WeatherContext";
 import { RootStackParamList, TabParamList } from "../navigation/navigationTypes";
 import {
   calculateShelterScore,
@@ -15,8 +16,8 @@ import {
 import {
   comfortLabel,
   crowdLabel,
-  formatRecommendationScore,
   formatDistance,
+  formatRecommendationScore,
   getDisplayScore,
   openLabel,
   ScoreBar,
@@ -32,23 +33,19 @@ type Props = CompositeScreenProps<
 
 type ClimateMode = "heat" | "cold";
 
-const currentWeather = {
-  location: "서울 성북구",
-  condition: "맑음",
-  temperature: 34.2,
-  feelsLike: 37.6,
-  humidity: 68,
-  riskLevel: "높음"
-};
+const CURRENT_LOCATION_LABEL = "서울 성북구";
 
 export function HomeScreen({ navigation }: Props) {
   const [mode, setMode] = useState<ClimateMode>("heat");
   const { preferences, selectedTagLabels } = usePreferenceSettings();
   const { shelters } = useShelterData();
+  const weather = useWeather();
   const recommendedShelter = getRecommendedShelters(shelters, preferences)[0];
   const score = calculateShelterScore(recommendedShelter, preferences);
   const displayScore = getDisplayScore(score);
   const reasons = getShelterRecommendationReasons(recommendedShelter, preferences);
+  const hasHeatAlert = weather.heatAlertStatus !== "none";
+  const alertLabel = weather.heatAlertStatus === "warning" ? "폭염경보" : "폭염주의보";
 
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
@@ -58,20 +55,27 @@ export function HomeScreen({ navigation }: Props) {
             <Text style={styles.appName}>휴숨</Text>
             <Text style={styles.headerSub}>현재 위치 기준 쉼터 추천</Text>
           </View>
-          <Text style={styles.weatherBadge}>{currentWeather.condition}</Text>
+          <Text style={styles.weatherBadge}>{weather.condition}</Text>
         </View>
 
         <View style={styles.locationRow}>
-          <Text style={styles.location}>{currentWeather.location}</Text>
-          <Text style={styles.riskBadge}>폭염 위험도 {currentWeather.riskLevel}</Text>
+          <Text style={styles.location}>{CURRENT_LOCATION_LABEL}</Text>
+          <Text style={styles.riskBadge}>폭염 위험도 {weather.heatRiskLevel}</Text>
         </View>
 
         <View style={styles.weatherGrid}>
-          <WeatherMetric label="현재 기온" value={`${currentWeather.temperature}℃`} />
-          <WeatherMetric label="체감온도" value={`${currentWeather.feelsLike}℃`} danger />
-          <WeatherMetric label="습도" value={`${currentWeather.humidity}%`} />
+          <WeatherMetric label="현재 기온" value={`${weather.temperature.toFixed(1)}℃`} />
+          <WeatherMetric label="체감온도" value={`${weather.feelsLikeTemperature.toFixed(1)}℃`} danger />
+          <WeatherMetric label="습도" value={`${weather.humidity}%`} />
         </View>
       </View>
+
+      {hasHeatAlert ? (
+        <View style={styles.alertCard}>
+          <Text style={styles.alertTitle}>현재 지역에 {alertLabel}가 발효 중입니다.</Text>
+          <Text style={styles.alertCopy}>장시간 야외 활동을 줄이고 가까운 쉼터 이용을 권장합니다.</Text>
+        </View>
+      ) : null}
 
       <View style={styles.segment}>
         <ModeButton label="폭염" active={mode === "heat"} onPress={() => setMode("heat")} />
@@ -288,6 +292,25 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontSize: 18,
     fontWeight: "900"
+  },
+  alertCard: {
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: "#fff7ed",
+    borderWidth: 1,
+    borderColor: "#fed7aa"
+  },
+  alertTitle: {
+    color: colors.warning,
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  alertCopy: {
+    color: colors.text,
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "800"
   },
   segment: {
     flexDirection: "row",

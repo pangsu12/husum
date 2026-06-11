@@ -8,6 +8,7 @@ import { FavoriteProvider } from "./src/contexts/FavoriteContext";
 import { PreferenceProvider } from "./src/contexts/PreferenceContext";
 import { ReportProvider } from "./src/contexts/ReportContext";
 import { ShelterDataProvider } from "./src/contexts/ShelterDataContext";
+import { WeatherProvider } from "./src/contexts/WeatherContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 
 export default function App() {
@@ -18,11 +19,13 @@ export default function App() {
           <FavoriteProvider>
             <PreferenceProvider>
               <ShelterDataProvider>
-                <ReportProvider>
-                  <NavigationContainer>
-                    <RootNavigator />
-                  </NavigationContainer>
-                </ReportProvider>
+                <WeatherProvider>
+                  <ReportProvider>
+                    <NavigationContainer>
+                      <RootNavigator />
+                    </NavigationContainer>
+                  </ReportProvider>
+                </WeatherProvider>
               </ShelterDataProvider>
             </PreferenceProvider>
           </FavoriteProvider>
