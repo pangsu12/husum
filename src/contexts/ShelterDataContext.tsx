@@ -7,6 +7,9 @@ import { Shelter } from "../types/shelter";
 
 type ShelterDataContextValue = ShelterDataResult & {
   allShelters: Shelter[];
+  filteredShelters: Shelter[];
+  apiShelterCount: number;
+  filteredShelterCount: number;
   loading: boolean;
   findShelter: (shelterId: string) => Shelter | undefined;
 };
@@ -14,6 +17,17 @@ type ShelterDataContextValue = ShelterDataResult & {
 const ShelterDataContext = createContext<ShelterDataContextValue | undefined>(undefined);
 
 const SHELTER_INFO_MESSAGE = "주변 쉼터 정보를 불러와 현재 위치와 사용자 조건에 맞게 추천합니다.";
+
+function dedupeShelters(shelters: Shelter[]) {
+  const seen = new Set<string>();
+
+  return shelters.filter((shelter) => {
+    const key = `${shelter.name.trim()}-${shelter.address.trim()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 export function ShelterDataProvider({ children }: { children: ReactNode }) {
   const { concreteRegion } = useLocationSelection();
@@ -41,15 +55,22 @@ export function ShelterDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<ShelterDataContextValue>(() => {
-    const allShelters = result.shelters.length > 0 ? result.shelters : mockShelters;
-    const regionalShelters = allShelters.filter((shelter) => shelter.region === concreteRegion);
-    const fallbackRegionalShelters = mockShelters.filter((shelter) => shelter.region === concreteRegion);
-    const shelters = regionalShelters.length > 0 ? regionalShelters : fallbackRegionalShelters;
+    const apiShelterCount = result.source === "api" ? result.shelters.length : 0;
+    const baseShelters = result.shelters.length > 0 ? result.shelters : mockShelters;
+    const regionalApiShelters = baseShelters.filter((shelter) => shelter.region === concreteRegion);
+    const regionalDefaultShelters = mockShelters.filter((shelter) => shelter.region === concreteRegion);
+    const filteredShelters = dedupeShelters(
+      regionalApiShelters.length >= 3 ? regionalApiShelters : [...regionalApiShelters, ...regionalDefaultShelters]
+    );
+    const allShelters = dedupeShelters([...baseShelters, ...mockShelters]);
 
     return {
       ...result,
       allShelters,
-      shelters,
+      shelters: filteredShelters,
+      filteredShelters,
+      apiShelterCount,
+      filteredShelterCount: filteredShelters.length,
       loading,
       message: SHELTER_INFO_MESSAGE,
       findShelter: (shelterId) =>

@@ -5,6 +5,11 @@ import { RegionKey } from "../types/shelter";
 export type AppRegionKey = RegionKey;
 export type ConcreteRegionKey = Exclude<RegionKey, "current">;
 
+export type Coordinates = {
+  latitude: number;
+  longitude: number;
+};
+
 export type RegionOption = {
   key: AppRegionKey;
   label: string;
@@ -79,10 +84,8 @@ type LocationContextValue = {
   concreteRegion: ConcreteRegionKey;
   regionLabel: string;
   surroundingLabel: string;
-  currentLocation: {
-    latitude: number;
-    longitude: number;
-  };
+  currentLocation: Coordinates;
+  moveToCurrentLocation: () => void;
 };
 
 const LocationContext = createContext<LocationContextValue | undefined>(undefined);
@@ -93,10 +96,35 @@ function getRegionOption(region: AppRegionKey) {
 
 export function LocationProvider({ children }: { children: ReactNode }) {
   const [selectedRegion, setSelectedRegion] = useState<AppRegionKey>("current");
+  const [browserLocation, setBrowserLocation] = useState<Coordinates | null>(null);
+
+  const moveToCurrentLocation = () => {
+    setSelectedRegion("current");
+
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setBrowserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+      },
+      () => undefined,
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+    );
+  };
 
   const value = useMemo<LocationContextValue>(() => {
     const selectedRegionOption = getRegionOption(selectedRegion);
     const regionLabel = selectedRegionOption.label;
+    const currentLocation =
+      selectedRegion === "current" && browserLocation
+        ? browserLocation
+        : {
+            latitude: selectedRegionOption.latitude,
+            longitude: selectedRegionOption.longitude
+          };
 
     return {
       selectedRegion,
@@ -105,12 +133,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       concreteRegion: selectedRegionOption.concreteRegion,
       regionLabel,
       surroundingLabel: `${regionLabel} 주변`,
-      currentLocation: {
-        latitude: selectedRegionOption.latitude,
-        longitude: selectedRegionOption.longitude
-      }
+      currentLocation,
+      moveToCurrentLocation
     };
-  }, [selectedRegion]);
+  }, [browserLocation, selectedRegion]);
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
 }

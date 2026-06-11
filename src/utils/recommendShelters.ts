@@ -2,6 +2,11 @@ import { preferenceTags } from "../contexts/PreferenceContext";
 import { crowdLevelLabels, facilityStatusLabels } from "../data/mockShelters";
 import { Shelter, UserPreferences } from "../types/shelter";
 
+export type RecommendationOrigin = {
+  latitude: number;
+  longitude: number;
+};
+
 const crowdScore = {
   low: 18,
   medium: 11,
@@ -18,48 +23,86 @@ function hasPreference(preferences: UserPreferences, tag: string) {
   return preferences.tags.includes(tag);
 }
 
-export function calculateShelterScore(shelter: Shelter, preferences: UserPreferences = { tags: [] }) {
-  let distanceScore = Math.max(0, Math.round(28 - shelter.distanceMeters / 35));
-  let openScore = shelter.isOpen ? 20 : 0;
-  let coolingScore = facilityScore[shelter.coolingStatus];
-  let crowdLevelScore = crowdScore[shelter.crowdLevel];
-  let accessibilityScore = shelter.wheelchairAccessible ? 10 : 3;
-  let waterScore = shelter.hasWater ? 6 : 0;
-  let petScore = shelter.petAllowed ? 4 : 0;
-  const reportScore = Math.round(shelter.positiveReportRate * 10);
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
 
-  if (preferences.routePreference === "shortest") distanceScore += shelter.distanceMeters <= 500 ? 5 : 0;
-  if (preferences.routePreference === "accessible") accessibilityScore += shelter.wheelchairAccessible ? 5 : 0;
-  if (preferences.routePreference === "shade") coolingScore += shelter.coolingStatus === "good" ? 3 : 0;
+export function getDistanceMeters(origin: RecommendationOrigin, destination: RecommendationOrigin) {
+  const earthRadius = 6371000;
+  const deltaLatitude = toRadians(destination.latitude - origin.latitude);
+  const deltaLongitude = toRadians(destination.longitude - origin.longitude);
+  const startLatitude = toRadians(origin.latitude);
+  const endLatitude = toRadians(destination.latitude);
+  const a =
+    Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
+    Math.cos(startLatitude) * Math.cos(endLatitude) * Math.sin(deltaLongitude / 2) * Math.sin(deltaLongitude / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(earthRadius * c);
+}
+
+export function getShelterWithOriginDistance(shelter: Shelter, origin?: RecommendationOrigin): Shelter {
+  if (!origin) return shelter;
+
+  const distanceMeters = getDistanceMeters(origin, {
+    latitude: shelter.latitude,
+    longitude: shelter.longitude
+  });
+
+  return {
+    ...shelter,
+    distanceMeters,
+    walkMinutes: Math.max(3, Math.round(distanceMeters / 75))
+  };
+}
+
+export function calculateShelterScore(
+  shelter: Shelter,
+  preferences: UserPreferences = { tags: [] },
+  origin?: RecommendationOrigin
+) {
+  const target = getShelterWithOriginDistance(shelter, origin);
+  let distanceScore = Math.max(0, Math.round(28 - target.distanceMeters / 35));
+  let openScore = target.isOpen ? 20 : 0;
+  let coolingScore = facilityScore[target.coolingStatus];
+  let crowdLevelScore = crowdScore[target.crowdLevel];
+  let accessibilityScore = target.wheelchairAccessible ? 10 : 3;
+  let waterScore = target.hasWater ? 6 : 0;
+  let petScore = target.petAllowed ? 4 : 0;
+  const reportScore = Math.round(target.positiveReportRate * 10);
+
+  if (preferences.routePreference === "shortest") distanceScore += target.distanceMeters <= 500 ? 5 : 0;
+  if (preferences.routePreference === "accessible") accessibilityScore += target.wheelchairAccessible ? 5 : 0;
+  if (preferences.routePreference === "shade") coolingScore += target.coolingStatus === "good" ? 3 : 0;
 
   if (hasPreference(preferences, preferenceTags.mobility) || hasPreference(preferences, preferenceTags.disabled)) {
-    distanceScore += shelter.distanceMeters <= 500 ? 7 : 0;
-    accessibilityScore += shelter.wheelchairAccessible ? 10 : -4;
+    distanceScore += target.distanceMeters <= 500 ? 7 : 0;
+    accessibilityScore += target.wheelchairAccessible ? 10 : -4;
   }
 
   if (hasPreference(preferences, preferenceTags.infant)) {
-    waterScore += shelter.hasWater ? 5 : 0;
-    coolingScore += shelter.coolingStatus === "good" ? 5 : 0;
-    crowdLevelScore += shelter.crowdLevel === "low" ? 5 : 0;
+    waterScore += target.hasWater ? 5 : 0;
+    coolingScore += target.coolingStatus === "good" ? 5 : 0;
+    crowdLevelScore += target.crowdLevel === "low" ? 5 : 0;
   }
 
   if (hasPreference(preferences, preferenceTags.senior) || hasPreference(preferences, preferenceTags.pregnant)) {
-    distanceScore += shelter.distanceMeters <= 400 ? 7 : 0;
-    openScore += shelter.isOpen ? 5 : 0;
-    accessibilityScore += shelter.wheelchairAccessible ? 5 : 0;
+    distanceScore += target.distanceMeters <= 400 ? 7 : 0;
+    openScore += target.isOpen ? 5 : 0;
+    accessibilityScore += target.wheelchairAccessible ? 5 : 0;
   }
 
   if (hasPreference(preferences, preferenceTags.outdoorWorker)) {
-    distanceScore += shelter.distanceMeters <= 600 ? 6 : 0;
-    coolingScore += shelter.coolingStatus === "good" ? 7 : 0;
+    distanceScore += target.distanceMeters <= 600 ? 6 : 0;
+    coolingScore += target.coolingStatus === "good" ? 7 : 0;
   }
 
   if (hasPreference(preferences, preferenceTags.pet)) {
-    petScore += shelter.petAllowed ? 14 : -8;
+    petScore += target.petAllowed ? 14 : -8;
   }
 
   if (hasPreference(preferences, preferenceTags.transit)) {
-    distanceScore += shelter.distanceMeters <= 700 ? 4 : 0;
+    distanceScore += target.distanceMeters <= 700 ? 4 : 0;
   }
 
   return Math.max(
@@ -80,47 +123,53 @@ export function calculateShelterScore(shelter: Shelter, preferences: UserPrefere
 
 export function getShelterRecommendationReasons(
   shelter: Shelter,
-  preferences: UserPreferences = { tags: [] }
+  preferences: UserPreferences = { tags: [] },
+  origin?: RecommendationOrigin
 ) {
+  const target = getShelterWithOriginDistance(shelter, origin);
   const reasons: string[] = [];
 
-  if (shelter.distanceMeters <= 300) reasons.push("가까움");
-  if (shelter.isOpen) reasons.push("운영 중");
-  if (shelter.coolingStatus === "good") reasons.push("냉방 쾌적");
-  if (shelter.crowdLevel === "low") reasons.push("혼잡도 낮음");
-  if (shelter.hasWater) reasons.push("물 제공");
-  if (shelter.wheelchairAccessible) reasons.push("휠체어 접근 가능");
-  if (shelter.petAllowed) reasons.push("반려동물 동반 가능");
+  if (target.distanceMeters <= 300) reasons.push("가까움");
+  if (target.isOpen) reasons.push("운영 중");
+  if (target.coolingStatus === "good") reasons.push("냉방 쾌적");
+  if (target.crowdLevel === "low") reasons.push("혼잡도 낮음");
+  if (target.hasWater) reasons.push("물 제공");
+  if (target.wheelchairAccessible) reasons.push("휠체어 접근 가능");
+  if (target.petAllowed) reasons.push("반려동물 동반 가능");
 
   if (
     (hasPreference(preferences, preferenceTags.mobility) || hasPreference(preferences, preferenceTags.disabled)) &&
-    shelter.wheelchairAccessible
+    target.wheelchairAccessible
   ) {
     reasons.unshift("이동 조건 반영");
   }
-  if (hasPreference(preferences, preferenceTags.infant) && shelter.hasWater && shelter.crowdLevel === "low") {
+  if (hasPreference(preferences, preferenceTags.infant) && target.hasWater && target.crowdLevel === "low") {
     reasons.unshift("영유아 동반 적합");
   }
-  if (hasPreference(preferences, preferenceTags.senior) && shelter.distanceMeters <= 400) {
+  if (hasPreference(preferences, preferenceTags.senior) && target.distanceMeters <= 400) {
     reasons.unshift("어르신 이동 부담 낮음");
   }
-  if (hasPreference(preferences, preferenceTags.pregnant) && shelter.distanceMeters <= 400) {
+  if (hasPreference(preferences, preferenceTags.pregnant) && target.distanceMeters <= 400) {
     reasons.unshift("임산부 이동 부담 낮음");
   }
-  if (hasPreference(preferences, preferenceTags.outdoorWorker) && shelter.coolingStatus === "good") {
+  if (hasPreference(preferences, preferenceTags.outdoorWorker) && target.coolingStatus === "good") {
     reasons.unshift("야외근로자 휴식 적합");
   }
-  if (hasPreference(preferences, preferenceTags.pet) && shelter.petAllowed) {
+  if (hasPreference(preferences, preferenceTags.pet) && target.petAllowed) {
     reasons.unshift("반려동물 동반 조건 반영");
   }
 
   return Array.from(new Set(reasons)).slice(0, 6);
 }
 
-export function getRecommendedShelters(shelters: Shelter[], preferences: UserPreferences = { tags: [] }) {
-  return [...shelters].sort(
-    (a, b) => calculateShelterScore(b, preferences) - calculateShelterScore(a, preferences)
-  );
+export function getRecommendedShelters(
+  shelters: Shelter[],
+  preferences: UserPreferences = { tags: [] },
+  origin?: RecommendationOrigin
+) {
+  return shelters
+    .map((shelter) => getShelterWithOriginDistance(shelter, origin))
+    .sort((a, b) => calculateShelterScore(b, preferences) - calculateShelterScore(a, preferences));
 }
 
 export function getReadableShelterStatus(shelter: Shelter) {

@@ -5,9 +5,13 @@ import { formatDistance, openLabel } from "../screens/ShelterUi";
 import { colors } from "../screens/sharedStyles";
 import { Shelter } from "../types/shelter";
 
+type Coordinates = { latitude: number; longitude: number };
+
 type Props = {
   shelters?: Shelter[];
   selectedShelterId?: string;
+  currentLocation?: Coordinates;
+  departureLocation?: Coordinates;
   onSelectShelter: (shelterId: string) => void;
   onOpenShelter: (shelterId: string) => void;
   mapStatusLabel?: string;
@@ -21,16 +25,27 @@ const markerColors: Record<Shelter["type"], string> = {
   private: colors.purple
 };
 
-const markerPositions = [
-  { top: "24%", left: "25%" },
-  { top: "42%", left: "65%" },
-  { top: "64%", left: "39%" },
-  { top: "28%", left: "78%" }
-] as const;
+function markerPosition(index: number) {
+  const positions = [
+    { top: "24%", left: "25%" },
+    { top: "42%", left: "65%" },
+    { top: "64%", left: "39%" },
+    { top: "28%", left: "78%" },
+    { top: "70%", left: "72%" },
+    { top: "18%", left: "48%" },
+    { top: "54%", left: "18%" },
+    { top: "36%", left: "38%" },
+    { top: "78%", left: "52%" },
+    { top: "16%", left: "68%" }
+  ] as const;
+
+  return positions[index % positions.length];
+}
 
 export function FallbackMapView({
   shelters = mockShelters,
   selectedShelterId,
+  departureLocation,
   onSelectShelter,
   onOpenShelter,
   mapStatusLabel,
@@ -55,9 +70,14 @@ export function FallbackMapView({
         <View style={[styles.building, styles.buildingTwo]} />
         <View style={[styles.building, styles.buildingThree]} />
         <View style={styles.currentMarker}>
-          <View style={styles.currentMarkerCore} />
+          <Text style={styles.locationMarkerText}>현</Text>
         </View>
-        {shelters.slice(0, markerPositions.length).map((shelter, index) => {
+        {departureLocation ? (
+          <View style={styles.departureMarker}>
+            <Text style={styles.locationMarkerText}>출</Text>
+          </View>
+        ) : null}
+        {shelters.slice(0, 10).map((shelter, index) => {
           const selected = shelter.id === selectedShelter.id;
           const recommended = index === 0;
 
@@ -66,7 +86,7 @@ export function FallbackMapView({
               key={shelter.id}
               style={[
                 styles.marker,
-                markerPositions[index],
+                markerPosition(index),
                 { backgroundColor: markerColors[shelter.type] },
                 recommended && styles.recommendedMarker,
                 selected && styles.selectedMarker
@@ -220,17 +240,29 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "rgba(37, 99, 235, 0.18)",
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  currentMarkerCore: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
     backgroundColor: colors.blue,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 3,
     borderColor: "#ffffff"
+  },
+  departureMarker: {
+    position: "absolute",
+    top: "57%",
+    left: "53%",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.purple,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#ffffff"
+  },
+  locationMarkerText: {
+    color: "#ffffff",
+    fontSize: 11,
+    fontWeight: "900"
   },
   marker: {
     position: "absolute",

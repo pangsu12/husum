@@ -10,8 +10,7 @@ declare const process: {
 
 const API_KEY = process.env.EXPO_PUBLIC_SHELTER_API_KEY?.trim();
 const SHELTER_API_URL = "https://www.safetydata.go.kr/V2/api/DSSP-IF-10942";
-const SHELTER_INFO_MESSAGE =
-  "일부 쉼터 정보는 공공데이터와 현장 제보를 바탕으로 업데이트됩니다.";
+const SHELTER_INFO_MESSAGE = "일부 쉼터 정보는 공공데이터와 현장 제보를 바탕으로 업데이트됩니다.";
 
 export type ShelterDataResult = {
   shelters: Shelter[];

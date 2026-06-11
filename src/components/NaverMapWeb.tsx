@@ -5,10 +5,14 @@ import { mockShelters, RECOMMENDED_SHELTER_NAME } from "../data/mockShelters";
 import { Shelter } from "../types/shelter";
 import { FallbackMapView } from "./FallbackMapView";
 
+type Coordinates = { latitude: number; longitude: number };
+
 type Props = {
   shelters?: Shelter[];
   selectedShelterId?: string;
-  currentLocation?: { latitude: number; longitude: number };
+  currentLocation?: Coordinates;
+  departureLocation?: Coordinates;
+  mapCenter?: Coordinates;
   regionLabel?: string;
   onSelectShelter: (shelterId: string) => void;
   onOpenShelter: (shelterId: string) => void;
@@ -66,11 +70,14 @@ function hasValidCoordinates(shelter: Shelter) {
   );
 }
 
-function markerContent(color: string, selected = false) {
+function markerContent(color: string, selected = false, label?: string) {
   const size = selected ? 34 : 26;
   const border = selected ? "#facc15" : "#ffffff";
+  const text = label
+    ? `<span style="color:#fff;font-size:11px;font-weight:900;line-height:${size - 8}px;">${label}</span>`
+    : "";
 
-  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:4px solid ${border};box-shadow:0 5px 14px rgba(15,23,42,.28);"></div>`;
+  return `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${color};border:4px solid ${border};box-shadow:0 5px 14px rgba(15,23,42,.28);">${text}</div>`;
 }
 
 function hasNaverMapError(element: HTMLElement | null) {
@@ -89,6 +96,8 @@ export function NaverMapWeb({
   shelters = mockShelters,
   selectedShelterId,
   currentLocation = DEFAULT_LOCATION,
+  departureLocation,
+  mapCenter,
   regionLabel = "현재 위치",
   onSelectShelter,
   onOpenShelter
@@ -163,7 +172,8 @@ export function NaverMapWeb({
       markerRefs.current.forEach((marker) => marker.setMap?.(null));
       markerRefs.current = [];
 
-      const center = new maps.LatLng(currentLocation.latitude, currentLocation.longitude);
+      const centerPoint = mapCenter ?? departureLocation ?? currentLocation;
+      const center = new maps.LatLng(centerPoint.latitude, centerPoint.longitude);
       const map =
         mapRef.current ??
         new maps.Map(mapElementRef.current, {
@@ -175,16 +185,29 @@ export function NaverMapWeb({
       mapRef.current = map;
       map.panTo?.(center);
 
-      const currentLocationMarker = new maps.Marker({
-        position: center,
+      const currentMarker = new maps.Marker({
+        position: new maps.LatLng(currentLocation.latitude, currentLocation.longitude),
         map,
-        title: regionLabel,
+        title: "현재 위치",
         icon: {
-          content: markerContent("#2563eb", true),
+          content: markerContent("#2563eb", true, "현"),
           anchor: new maps.LatLng(17, 17)
         }
       });
-      markerRefs.current.push(currentLocationMarker);
+      markerRefs.current.push(currentMarker);
+
+      if (departureLocation) {
+        const departureMarker = new maps.Marker({
+          position: new maps.LatLng(departureLocation.latitude, departureLocation.longitude),
+          map,
+          title: "출발지",
+          icon: {
+            content: markerContent("#9333ea", true, "출"),
+            anchor: new maps.LatLng(17, 17)
+          }
+        });
+        markerRefs.current.push(departureMarker);
+      }
 
       validShelters.forEach((shelter, index) => {
         const selected = shelter.id === selectedShelter.id;
@@ -209,13 +232,15 @@ export function NaverMapWeb({
     } catch {
       setStatus("sdk-failed");
     }
-  }, [currentLocation, onSelectShelter, regionLabel, selectedShelter, shelters, status]);
+  }, [currentLocation, departureLocation, mapCenter, onSelectShelter, selectedShelter, shelters, status]);
 
   if (status === "sdk-failed" || status === "client-id-missing") {
     return (
       <FallbackMapView
         shelters={shelters}
         selectedShelterId={selectedShelterId}
+        currentLocation={currentLocation}
+        departureLocation={departureLocation}
         onSelectShelter={onSelectShelter}
         onOpenShelter={onOpenShelter}
         mapStatusLabel={getMapStatusLabel(status, regionLabel)}
