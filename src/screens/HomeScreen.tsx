@@ -4,10 +4,10 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { AppRegionKey, regionOptions, useLocationSelection } from "../contexts/LocationContext";
 import { usePreferenceSettings } from "../contexts/PreferenceContext";
 import { useShelterData } from "../contexts/ShelterDataContext";
 import { useWeather } from "../contexts/WeatherContext";
-import { AppRegionKey, regionOptions, useLocationSelection } from "../contexts/LocationContext";
 import { RootStackParamList, TabParamList } from "../navigation/navigationTypes";
 import {
   calculateShelterScore,
@@ -34,6 +34,12 @@ type Props = CompositeScreenProps<
 
 type ClimateMode = "heat" | "cold";
 
+function getRiskCopy(regionLabel: string, heatRiskLevel: string) {
+  if (heatRiskLevel === "매우 높음") return `${regionLabel} 주변 폭염 위험이 매우 높습니다.`;
+  if (heatRiskLevel === "높음") return `${regionLabel} 주변 폭염 위험이 높습니다.`;
+  return `${regionLabel} 주변 폭염 위험을 확인했습니다.`;
+}
+
 export function HomeScreen({ navigation }: Props) {
   const [mode, setMode] = useState<ClimateMode>("heat");
   const { preferences, selectedTagLabels } = usePreferenceSettings();
@@ -53,7 +59,7 @@ export function HomeScreen({ navigation }: Props) {
         <View style={sharedStyles.row}>
           <View>
             <Text style={styles.appName}>휴숨</Text>
-            <Text style={styles.headerSub}>현재 위치 기준 쉼터 추천</Text>
+            <Text style={styles.headerSub}>지역 기준 쉼터 추천</Text>
           </View>
           <Text style={styles.weatherBadge}>{weather.condition}</Text>
         </View>
@@ -62,6 +68,7 @@ export function HomeScreen({ navigation }: Props) {
           <Text style={styles.location}>{surroundingLabel}</Text>
           <Text style={styles.riskBadge}>폭염 위험도 {weather.heatRiskLevel}</Text>
         </View>
+        <Text style={styles.riskCopy}>{getRiskCopy(regionLabel, weather.heatRiskLevel)}</Text>
 
         <RegionSelector selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} compact />
 
@@ -297,6 +304,13 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     fontSize: 12,
     fontWeight: "900"
+  },
+  riskCopy: {
+    color: "#ffffff",
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "800"
   },
   weatherGrid: {
     flexDirection: "row",

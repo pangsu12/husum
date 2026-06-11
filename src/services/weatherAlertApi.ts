@@ -43,7 +43,7 @@ function isAdvisoryText(item: Record<string, unknown>) {
   return Object.values(item).some((value) => typeof value === "string" && value.includes("주의보"));
 }
 
-export async function fetchHeatAlertStatus(): Promise<WeatherAlertApiData | null> {
+export async function fetchHeatAlertStatus(stnId = "108"): Promise<WeatherAlertApiData | null> {
   if (!SPECIAL_WEATHER_API_KEY) return null;
 
   try {
@@ -52,7 +52,7 @@ export async function fetchHeatAlertStatus(): Promise<WeatherAlertApiData | null
       pageNo: "1",
       numOfRows: "50",
       dataType: "JSON",
-      stnId: "108"
+      stnId
     });
     const response = await fetch(`${WEATHER_ALERT_API_URL}?${params.toString()}`);
 

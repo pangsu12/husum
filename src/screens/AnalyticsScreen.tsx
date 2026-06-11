@@ -5,13 +5,26 @@ import { analysisResults, RegionRiskScore } from "../data/analysisResults";
 import { ScoreBar, Tag } from "./ShelterUi";
 import { colors, sharedStyles } from "./sharedStyles";
 
+function getSelectedRegionCopy(region: string, score: number, rank: number) {
+  if (region === "대구") {
+    return "대구는 2020~2025년 분석에서 종합 폭염 취약도 71.1점으로 가장 높게 나타났습니다.";
+  }
+  if (region === "부산") {
+    return "부산은 고령인구 비율이 높아 취약계층 보호가 중요한 지역입니다.";
+  }
+
+  return `${region}은 2020~2025년 분석에서 종합 폭염 취약도 ${score}점으로 전체 ${rank}번째로 나타났습니다.`;
+}
+
 export function AnalyticsScreen() {
   const { selectedRegionOption, regionLabel } = useLocationSelection();
+  const selectedRegionName = selectedRegionOption.shortLabel === "현재 위치" ? "서울" : selectedRegionOption.shortLabel;
   const selectedScore =
-    analysisResults.regionRiskScores.find((item) => item.region === selectedRegionOption.shortLabel)
-      ?.integratedHeatRiskScore ?? selectedRegionOption.analysisScore ?? 0;
-  const selectedRank = analysisResults.regionRiskScores.findIndex((item) => item.region === selectedRegionOption.shortLabel) + 1;
-  const rankCopy = selectedRank > 0 ? `${selectedRank}번째` : "분석 대상";
+    analysisResults.regionRiskScores.find((item) => item.region === selectedRegionName)?.integratedHeatRiskScore ??
+    selectedRegionOption.analysisScore ??
+    0;
+  const selectedRank =
+    analysisResults.regionRiskScores.findIndex((item) => item.region === selectedRegionName) + 1 || 1;
 
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
@@ -30,8 +43,7 @@ export function AnalyticsScreen() {
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>현재 선택 지역: {regionLabel}</Text>
         <Text style={[sharedStyles.body, { marginTop: 8 }]}>
-          {selectedRegionOption.shortLabel}는 2020~2025년 분석에서 종합 폭염 취약도 {selectedScore}점으로 {rankCopy}로
-          나타났습니다.
+          {getSelectedRegionCopy(selectedRegionName, selectedScore, selectedRank)}
         </Text>
         <View style={styles.selectedScoreBar}>
           <ScoreBar score={selectedScore} danger={selectedScore >= 70} />
