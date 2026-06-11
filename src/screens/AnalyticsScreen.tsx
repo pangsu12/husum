@@ -1,10 +1,18 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { useLocationSelection } from "../contexts/LocationContext";
 import { analysisResults, RegionRiskScore } from "../data/analysisResults";
 import { ScoreBar, Tag } from "./ShelterUi";
 import { colors, sharedStyles } from "./sharedStyles";
 
 export function AnalyticsScreen() {
+  const { selectedRegionOption, regionLabel } = useLocationSelection();
+  const selectedScore =
+    analysisResults.regionRiskScores.find((item) => item.region === selectedRegionOption.shortLabel)
+      ?.integratedHeatRiskScore ?? selectedRegionOption.analysisScore ?? 0;
+  const selectedRank = analysisResults.regionRiskScores.findIndex((item) => item.region === selectedRegionOption.shortLabel) + 1;
+  const rankCopy = selectedRank > 0 ? `${selectedRank}번째` : "분석 대상";
+
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
       <View style={sharedStyles.elevatedCard}>
@@ -16,6 +24,17 @@ export function AnalyticsScreen() {
         <View style={styles.tagWrap}>
           <Tag label="기상청 ASOS 종관기상관측 데이터" tone="gray" />
           <Tag label="질병관리청 온열질환 감시 데이터" tone="gray" />
+        </View>
+      </View>
+
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.sectionTitle}>현재 선택 지역: {regionLabel}</Text>
+        <Text style={[sharedStyles.body, { marginTop: 8 }]}>
+          {selectedRegionOption.shortLabel}는 2020~2025년 분석에서 종합 폭염 취약도 {selectedScore}점으로 {rankCopy}로
+          나타났습니다.
+        </Text>
+        <View style={styles.selectedScoreBar}>
+          <ScoreBar score={selectedScore} danger={selectedScore >= 70} />
         </View>
       </View>
 
@@ -170,6 +189,9 @@ const styles = StyleSheet.create({
   },
   sectionLead: {
     marginTop: 7
+  },
+  selectedScoreBar: {
+    marginTop: 12
   },
   metricGrid: {
     flexDirection: "row",

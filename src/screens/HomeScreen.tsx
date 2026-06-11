@@ -7,6 +7,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { usePreferenceSettings } from "../contexts/PreferenceContext";
 import { useShelterData } from "../contexts/ShelterDataContext";
 import { useWeather } from "../contexts/WeatherContext";
+import { AppRegionKey, regionOptions, useLocationSelection } from "../contexts/LocationContext";
 import { RootStackParamList, TabParamList } from "../navigation/navigationTypes";
 import {
   calculateShelterScore,
@@ -33,13 +34,12 @@ type Props = CompositeScreenProps<
 
 type ClimateMode = "heat" | "cold";
 
-const CURRENT_LOCATION_LABEL = "서울 성북구";
-
 export function HomeScreen({ navigation }: Props) {
   const [mode, setMode] = useState<ClimateMode>("heat");
   const { preferences, selectedTagLabels } = usePreferenceSettings();
   const { shelters } = useShelterData();
   const weather = useWeather();
+  const { selectedRegion, setSelectedRegion, regionLabel, surroundingLabel } = useLocationSelection();
   const recommendedShelter = getRecommendedShelters(shelters, preferences)[0];
   const score = calculateShelterScore(recommendedShelter, preferences);
   const displayScore = getDisplayScore(score);
@@ -59,9 +59,11 @@ export function HomeScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.locationRow}>
-          <Text style={styles.location}>{CURRENT_LOCATION_LABEL}</Text>
+          <Text style={styles.location}>{surroundingLabel}</Text>
           <Text style={styles.riskBadge}>폭염 위험도 {weather.heatRiskLevel}</Text>
         </View>
+
+        <RegionSelector selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} compact />
 
         <View style={styles.weatherGrid}>
           <WeatherMetric label="현재 기온" value={`${weather.temperature.toFixed(1)}℃`} />
@@ -91,7 +93,7 @@ export function HomeScreen({ navigation }: Props) {
         </View>
       ) : (
         <View style={styles.recommendCard}>
-          <Text style={styles.eyebrow}>현재 내 위치 기준 최적 쉼터</Text>
+          <Text style={styles.eyebrow}>{regionLabel} 기준 최적 쉼터</Text>
           <Text style={styles.shelterName}>{recommendedShelter.name}</Text>
           <Text style={sharedStyles.muted}>{recommendedShelter.address}</Text>
 
@@ -121,7 +123,7 @@ export function HomeScreen({ navigation }: Props) {
           </View>
 
           <Text style={[sharedStyles.muted, { marginTop: 12 }]}>
-            현재 위치, 운영 여부, 냉방 상태, 혼잡도와 선택한 맞춤 조건을 함께 반영했습니다.
+            선택한 지역과 사용자 조건을 기준으로 가장 적합한 쉼터를 추천합니다.
           </Text>
 
           <View style={styles.buttonRow}>
@@ -216,6 +218,33 @@ function QuickButton({ label, onPress }: { label: string; onPress: () => void })
   );
 }
 
+function RegionSelector({
+  selectedRegion,
+  onSelectRegion,
+  compact
+}: {
+  selectedRegion: AppRegionKey;
+  onSelectRegion: (region: AppRegionKey) => void;
+  compact?: boolean;
+}) {
+  return (
+    <View style={[styles.regionWrap, compact && styles.regionWrapCompact]}>
+      {regionOptions.map((region) => {
+        const active = selectedRegion === region.key;
+        return (
+          <Pressable
+            key={region.key}
+            style={[styles.regionChip, active && styles.regionChipActive]}
+            onPress={() => onSelectRegion(region.key)}
+          >
+            <Text style={[styles.regionChipText, active && styles.regionChipTextActive]}>{region.shortLabel}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   header: {
     borderRadius: 22,
@@ -273,6 +302,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginTop: 14
+  },
+  regionWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7
+  },
+  regionWrapCompact: {
+    marginTop: 13
+  },
+  regionChip: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)"
+  },
+  regionChipActive: {
+    backgroundColor: "#ffffff",
+    borderColor: "#ffffff"
+  },
+  regionChipText: {
+    color: "#dbeafe",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  regionChipTextActive: {
+    color: colors.blue
   },
   weatherMetric: {
     flex: 1,

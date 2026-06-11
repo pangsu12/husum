@@ -4,6 +4,8 @@ export type CrowdLevel = "low" | "medium" | "high";
 
 export type FacilityStatus = "good" | "weak" | "none";
 
+export type RegionKey = "current" | "seoul" | "daejeon" | "daegu" | "busan" | "gwangju";
+
 export type Shelter = {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ export type Shelter = {
   longitude: number;
   reportCount: number;
   positiveReportRate: number;
+  region?: Exclude<RegionKey, "current">;
   source?: "mock" | "api";
 };
 

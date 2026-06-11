@@ -11,6 +11,7 @@ type Props = {
   onSelectShelter: (shelterId: string) => void;
   onOpenShelter: (shelterId: string) => void;
   mapStatusLabel?: string;
+  regionLabel?: string;
 };
 
 const markerColors: Record<Shelter["type"], string> = {
@@ -32,7 +33,8 @@ export function FallbackMapView({
   selectedShelterId,
   onSelectShelter,
   onOpenShelter,
-  mapStatusLabel = "현재 위치 주변 쉼터를 표시하고 있습니다."
+  mapStatusLabel,
+  regionLabel = "현재 위치"
 }: Props) {
   const selectedShelter =
     shelters.find((shelter) => shelter.id === selectedShelterId) ?? shelters[0] ?? mockShelters[0];
@@ -40,8 +42,8 @@ export function FallbackMapView({
   return (
     <View style={styles.shell}>
       <View style={styles.mapHeader}>
-        <Text style={styles.mapStatus}>{mapStatusLabel}</Text>
-        <Text style={styles.mapScale}>서울 성북구 주변</Text>
+        <Text style={styles.mapStatus}>{mapStatusLabel ?? `${regionLabel} 주변 쉼터를 표시하고 있습니다.`}</Text>
+        <Text style={styles.mapScale}>{regionLabel} 주변</Text>
       </View>
       <View style={styles.mapCanvas}>
         <View style={[styles.road, styles.roadOne]} />
@@ -57,7 +59,7 @@ export function FallbackMapView({
         </View>
         {shelters.slice(0, markerPositions.length).map((shelter, index) => {
           const selected = shelter.id === selectedShelter.id;
-          const recommended = shelter.id === "shelter-1";
+          const recommended = index === 0;
 
           return (
             <Pressable
@@ -85,7 +87,7 @@ export function FallbackMapView({
         <View style={styles.placeTitleRow}>
           <Text style={styles.placeName}>{selectedShelter.name}</Text>
           <Text style={styles.recommendBadge}>
-            {selectedShelter.id === "shelter-1" ? "추천" : shelterTypeLabels[selectedShelter.type]}
+            {selectedShelter.id === shelters[0]?.id ? "추천" : shelterTypeLabels[selectedShelter.type]}
           </Text>
         </View>
         <Text style={styles.placeMeta}>

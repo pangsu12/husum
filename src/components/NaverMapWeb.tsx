@@ -8,6 +8,8 @@ import { FallbackMapView } from "./FallbackMapView";
 type Props = {
   shelters?: Shelter[];
   selectedShelterId?: string;
+  currentLocation?: { latitude: number; longitude: number };
+  regionLabel?: string;
   onSelectShelter: (shelterId: string) => void;
   onOpenShelter: (shelterId: string) => void;
 };
@@ -16,7 +18,6 @@ type MapStatus = "client-id-missing" | "sdk-loading" | "sdk-loaded" | "map-rende
 
 type NaverLatLng = unknown;
 type NaverMap = {
-  setCenter?: (latLng: NaverLatLng) => void;
   panTo?: (latLng: NaverLatLng) => void;
 };
 type NaverMarker = {
@@ -54,7 +55,7 @@ declare global {
 const clientId = process.env.EXPO_PUBLIC_NAVER_MAP_CLIENT_ID?.trim();
 const SDK_SCRIPT_ID = "naver-map-sdk";
 const SDK_URL = clientId ? `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}` : "";
-const CURRENT_LOCATION = { latitude: 37.6025, longitude: 127.0329 };
+const DEFAULT_LOCATION = { latitude: 37.5894, longitude: 127.0167 };
 
 function hasValidCoordinates(shelter: Shelter) {
   return (
@@ -78,17 +79,17 @@ function hasNaverMapError(element: HTMLElement | null) {
   return message.includes("Open API") || message.toLowerCase().includes("auth");
 }
 
-function getMapStatusLabel(status: MapStatus) {
-  if (status === "map-rendered") return "현재 위치 주변 쉼터를 표시하고 있습니다.";
-  if (status === "sdk-loading") return "주변 쉼터 지도를 불러오는 중입니다.";
-  if (status === "sdk-loaded") return "주변 쉼터 정보를 지도에 표시하고 있습니다.";
-
-  return "현재 위치 주변 쉼터를 표시하고 있습니다.";
+function getMapStatusLabel(status: MapStatus, regionLabel: string) {
+  if (status === "sdk-loading") return `${regionLabel} 주변 쉼터 지도를 불러오는 중입니다.`;
+  if (status === "sdk-loaded") return `${regionLabel} 주변 쉼터 정보를 지도에 표시하고 있습니다.`;
+  return `${regionLabel} 주변 쉼터를 표시하고 있습니다.`;
 }
 
 export function NaverMapWeb({
   shelters = mockShelters,
   selectedShelterId,
+  currentLocation = DEFAULT_LOCATION,
+  regionLabel = "현재 위치",
   onSelectShelter,
   onOpenShelter
 }: Props) {
@@ -153,7 +154,7 @@ export function NaverMapWeb({
     const maps = window.naver.maps;
     const validShelters = shelters.filter(hasValidCoordinates);
 
-    if (!hasValidCoordinates(selectedShelter) || validShelters.length === 0) {
+    if (validShelters.length === 0) {
       setStatus("sdk-failed");
       return;
     }
@@ -162,12 +163,12 @@ export function NaverMapWeb({
       markerRefs.current.forEach((marker) => marker.setMap?.(null));
       markerRefs.current = [];
 
-      const center = new maps.LatLng(selectedShelter.latitude, selectedShelter.longitude);
+      const center = new maps.LatLng(currentLocation.latitude, currentLocation.longitude);
       const map =
         mapRef.current ??
         new maps.Map(mapElementRef.current, {
           center,
-          zoom: 15,
+          zoom: 13,
           minZoom: 9
         });
 
@@ -175,9 +176,9 @@ export function NaverMapWeb({
       map.panTo?.(center);
 
       const currentLocationMarker = new maps.Marker({
-        position: new maps.LatLng(CURRENT_LOCATION.latitude, CURRENT_LOCATION.longitude),
+        position: center,
         map,
-        title: "현재 위치",
+        title: regionLabel,
         icon: {
           content: markerContent("#2563eb", true),
           anchor: new maps.LatLng(17, 17)
@@ -185,9 +186,9 @@ export function NaverMapWeb({
       });
       markerRefs.current.push(currentLocationMarker);
 
-      validShelters.forEach((shelter) => {
+      validShelters.forEach((shelter, index) => {
         const selected = shelter.id === selectedShelter.id;
-        const recommended = shelter.name === RECOMMENDED_SHELTER_NAME || shelter.id === "shelter-1";
+        const recommended = shelter.name === RECOMMENDED_SHELTER_NAME || index === 0;
         const marker = new maps.Marker({
           position: new maps.LatLng(shelter.latitude, shelter.longitude),
           map,
@@ -208,7 +209,7 @@ export function NaverMapWeb({
     } catch {
       setStatus("sdk-failed");
     }
-  }, [onSelectShelter, selectedShelter, shelters, status]);
+  }, [currentLocation, onSelectShelter, regionLabel, selectedShelter, shelters, status]);
 
   if (status === "sdk-failed" || status === "client-id-missing") {
     return (
@@ -217,14 +218,15 @@ export function NaverMapWeb({
         selectedShelterId={selectedShelterId}
         onSelectShelter={onSelectShelter}
         onOpenShelter={onOpenShelter}
-        mapStatusLabel={getMapStatusLabel(status)}
+        mapStatusLabel={getMapStatusLabel(status, regionLabel)}
+        regionLabel={regionLabel}
       />
     );
   }
 
   return (
     <div style={styles.shell}>
-      <div style={styles.statusPill}>{getMapStatusLabel(status)}</div>
+      <div style={styles.statusPill}>{getMapStatusLabel(status, regionLabel)}</div>
       <div
         ref={mapElementRef}
         style={{

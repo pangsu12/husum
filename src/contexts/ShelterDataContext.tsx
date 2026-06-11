@@ -1,10 +1,12 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
+import { useLocationSelection } from "./LocationContext";
 import { mockShelters } from "../data/mockShelters";
 import { fetchSheltersFromApi, ShelterDataResult } from "../services/shelterApi";
 import { Shelter } from "../types/shelter";
 
 type ShelterDataContextValue = ShelterDataResult & {
+  allShelters: Shelter[];
   loading: boolean;
   findShelter: (shelterId: string) => Shelter | undefined;
 };
@@ -14,6 +16,7 @@ const ShelterDataContext = createContext<ShelterDataContextValue | undefined>(un
 const SHELTER_INFO_MESSAGE = "주변 쉼터 정보를 불러와 현재 위치와 사용자 조건에 맞게 추천합니다.";
 
 export function ShelterDataProvider({ children }: { children: ReactNode }) {
+  const { concreteRegion } = useLocationSelection();
   const [result, setResult] = useState<ShelterDataResult>({
     shelters: mockShelters,
     source: "mock",
@@ -37,16 +40,23 @@ export function ShelterDataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const value = useMemo<ShelterDataContextValue>(
-    () => ({
+  const value = useMemo<ShelterDataContextValue>(() => {
+    const allShelters = result.shelters.length > 0 ? result.shelters : mockShelters;
+    const regionalShelters = allShelters.filter((shelter) => shelter.region === concreteRegion);
+    const fallbackRegionalShelters = mockShelters.filter((shelter) => shelter.region === concreteRegion);
+    const shelters = regionalShelters.length > 0 ? regionalShelters : fallbackRegionalShelters;
+
+    return {
       ...result,
+      allShelters,
+      shelters,
       loading,
+      message: SHELTER_INFO_MESSAGE,
       findShelter: (shelterId) =>
-        result.shelters.find((shelter) => shelter.id === shelterId) ??
+        allShelters.find((shelter) => shelter.id === shelterId) ??
         mockShelters.find((shelter) => shelter.id === shelterId)
-    }),
-    [loading, result]
-  );
+    };
+  }, [concreteRegion, loading, result]);
 
   return <ShelterDataContext.Provider value={value}>{children}</ShelterDataContext.Provider>;
 }

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { NaverMapWeb } from "../components/NaverMapWeb";
+import { AppRegionKey, regionOptions, useLocationSelection } from "../contexts/LocationContext";
 import { usePreferenceSettings } from "../contexts/PreferenceContext";
 import { useShelterData } from "../contexts/ShelterDataContext";
 import { RootStackParamList, TabParamList } from "../navigation/navigationTypes";
@@ -16,8 +17,8 @@ import {
 import {
   comfortLabel,
   crowdLabel,
-  formatRecommendationScore,
   formatDistance,
+  formatRecommendationScore,
   getDisplayScore,
   openLabel,
   ScoreBar,
@@ -34,6 +35,7 @@ type Props = CompositeScreenProps<
 export function MapScreen({ navigation, route }: Props) {
   const { shelters } = useShelterData();
   const { preferences } = usePreferenceSettings();
+  const { selectedRegion, setSelectedRegion, regionLabel, surroundingLabel, currentLocation } = useLocationSelection();
   const recommendedShelters = useMemo(() => getRecommendedShelters(shelters, preferences), [shelters, preferences]);
   const initialSelectedId = route.params?.selectedShelterId ?? recommendedShelters[0]?.id ?? shelters[0]?.id;
   const [selectedShelterId, setSelectedShelterId] = useState(initialSelectedId);
@@ -49,10 +51,10 @@ export function MapScreen({ navigation, route }: Props) {
   const selectedReasons = selectedShelter ? getShelterRecommendationReasons(selectedShelter, preferences) : [];
 
   useEffect(() => {
-    if (route.params?.selectedShelterId) {
+    if (route.params?.selectedShelterId && shelters.some((shelter) => shelter.id === route.params?.selectedShelterId)) {
       setSelectedShelterId(route.params.selectedShelterId);
     }
-  }, [route.params?.selectedShelterId]);
+  }, [route.params?.selectedShelterId, shelters]);
 
   useEffect(() => {
     if (!shelters.some((shelter) => shelter.id === selectedShelterId) && recommendedShelters[0]) {
@@ -81,23 +83,28 @@ export function MapScreen({ navigation, route }: Props) {
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.sectionTitle}>주변 쉼터 탐색</Text>
         <Text style={[sharedStyles.muted, { marginTop: 6 }]}>
-          현재 위치 주변 쉼터를 표시하고 있습니다. 사용자 조건에 맞게 추천 순서를 계산합니다.
+          {surroundingLabel} 쉼터를 표시하고 있습니다. 사용자 조건에 맞게 추천 순서를 계산합니다.
         </Text>
+        <RegionSelector selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} />
         <Pressable style={[sharedStyles.primaryButton, styles.findButton]} onPress={selectBestShelter}>
-          <Text style={sharedStyles.primaryButtonText}>내 위치 기준 최적 쉼터 찾기</Text>
+          <Text style={sharedStyles.primaryButtonText}>
+            {selectedRegion === "current" ? "내 위치 기준 최적 쉼터 찾기" : "선택 지역 기준 최적 쉼터 찾기"}
+          </Text>
         </Pressable>
       </View>
 
       <NaverMapWeb
         shelters={shelters}
         selectedShelterId={selectedShelter.id}
+        currentLocation={currentLocation}
+        regionLabel={regionLabel}
         onSelectShelter={setSelectedShelterId}
         onOpenShelter={openDetail}
       />
 
       <View style={sharedStyles.elevatedCard}>
         <View style={sharedStyles.row}>
-          <Text style={styles.selectedLabel}>내 위치 기준 추천 쉼터</Text>
+          <Text style={styles.selectedLabel}>{regionLabel} 기준 추천 쉼터</Text>
           <Text style={styles.scoreBadge}>{formatRecommendationScore(selectedScore, selectedRankOffset)}</Text>
         </View>
         <Text style={styles.selectedName}>{selectedShelter.name}</Text>
@@ -144,7 +151,7 @@ export function MapScreen({ navigation, route }: Props) {
 
       <View style={styles.listHeader}>
         <Text style={sharedStyles.sectionTitle}>추천 순서</Text>
-        <Text style={sharedStyles.muted}>주변 쉼터 정보를 불러와 현재 위치와 사용자 조건에 맞게 추천합니다.</Text>
+        <Text style={sharedStyles.muted}>선택한 지역의 쉼터 목록 안에서 현재 조건에 맞게 정렬합니다.</Text>
       </View>
 
       {recommendedShelters.map((shelter, index) => {
@@ -175,11 +182,62 @@ export function MapScreen({ navigation, route }: Props) {
   );
 }
 
+function RegionSelector({
+  selectedRegion,
+  onSelectRegion
+}: {
+  selectedRegion: AppRegionKey;
+  onSelectRegion: (region: AppRegionKey) => void;
+}) {
+  return (
+    <View style={styles.regionWrap}>
+      {regionOptions.map((region) => {
+        const active = selectedRegion === region.key;
+        return (
+          <Pressable
+            key={region.key}
+            style={[styles.regionChip, active && styles.regionChipActive]}
+            onPress={() => onSelectRegion(region.key)}
+          >
+            <Text style={[styles.regionChipText, active && styles.regionChipTextActive]}>{region.shortLabel}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   center: {
     alignItems: "center",
     justifyContent: "center",
     padding: 20
+  },
+  regionWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginTop: 12
+  },
+  regionChip: {
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: colors.line
+  },
+  regionChipActive: {
+    backgroundColor: colors.blue,
+    borderColor: colors.blue
+  },
+  regionChipText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  regionChipTextActive: {
+    color: "#ffffff"
   },
   findButton: {
     marginTop: 12
