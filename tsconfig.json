@@ -3,5 +3,6 @@
   "compilerOptions": {
     "strict": true,
     "baseUrl": "."
-  }
+  },
+  "exclude": ["docs/design/**", "node_modules"]
 }

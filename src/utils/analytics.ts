@@ -20,7 +20,7 @@ export function calculateAirQualityRisk(airQuality: AirQualityData) {
       { label: "초미세먼지 점수", score: pm25Score, description: `PM2.5 ${airQuality.pm25}` },
       { label: "오존 점수", score: ozoneScore, description: `오존 ${airQuality.ozone}` },
       {
-        label: "통합대기 점수",
+        label: "대기환경 점수",
         score: indexScore,
         description: `통합대기환경 ${airQuality.airQualityIndex}`
       }
@@ -45,11 +45,11 @@ export function calculateClimateRiskScore(
   return {
     finalScore,
     parts: [
-      { label: "기온 점수", score: temperatureScore, description: `${weather.temperature.toFixed(1)}도` },
+      { label: "기온 점수", score: temperatureScore, description: `${weather.temperature.toFixed(1)}℃` },
       {
         label: "체감온도 점수",
         score: feelsLikeScore,
-        description: `${weather.feelsLike.toFixed(1)}도`
+        description: `${weather.feelsLike.toFixed(1)}℃`
       },
       { label: "습도 점수", score: humidityScore, description: `${weather.humidity}%` },
       {
@@ -58,9 +58,9 @@ export function calculateClimateRiskScore(
         description: `PM2.5 ${airQuality.pm25}, 오존 ${airQuality.ozone}`
       },
       {
-        label: "취약 사용자 가중치",
+        label: "사용자 조건 가중치",
         score: vulnerableUserWeight,
-        description: "어르신, 보행 불편 조건 반영"
+        description: "어르신, 보행 불편 등 선택 조건 반영"
       }
     ] satisfies ScorePart[]
   };
@@ -93,7 +93,7 @@ export function calculateShelterRecommendationScore(shelter: Shelter, sessionRep
       {
         label: "운영 여부 점수",
         score: openScore,
-        description: shelter.isOpen ? "현재 운영 중" : "운영 종료"
+        description: shelter.isOpen ? "현재 운영 중" : "운영 확인 필요"
       },
       {
         label: "냉방 상태 점수",
@@ -104,12 +104,12 @@ export function calculateShelterRecommendationScore(shelter: Shelter, sessionRep
       {
         label: "접근성 점수",
         score: accessibilityScore,
-        description: shelter.wheelchairAccessible ? "휠체어 접근 가능" : "접근성 제한"
+        description: shelter.wheelchairAccessible ? "휠체어 접근 가능" : "접근성 확인 필요"
       },
       {
-        label: "시민 제보 신뢰도 점수",
+        label: "현장 제보 반영",
         score: reportReliabilityScore,
-        description: `기본 ${shelter.reportCount}건 + 세션 ${sessionReportCount}건`
+        description: `최근 제보 ${shelter.reportCount + sessionReportCount}건 반영`
       }
     ] satisfies ScorePart[]
   };
@@ -135,7 +135,7 @@ export function getRecommendationReason(shelter: Shelter) {
   if (shelter.isOpen) reasons.push("운영 중이라 바로 이용할 수 있습니다.");
   if (shelter.coolingStatus === "good") reasons.push("냉방 상태가 좋아 폭염 상황에 적합합니다.");
   if (shelter.wheelchairAccessible) reasons.push("휠체어 접근이 가능해 이동 약자에게 적합합니다.");
-  if (shelter.positiveReportRate >= 0.8) reasons.push("최근 시민 제보 평가가 좋습니다.");
+  if (shelter.positiveReportRate >= 0.8) reasons.push("최근 이용자 제보 평가가 좋습니다.");
 
   return reasons.slice(0, 3).join(" ");
 }

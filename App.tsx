@@ -5,7 +5,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar, StyleSheet, View } from "react-native";
 
 import { FavoriteProvider } from "./src/contexts/FavoriteContext";
+import { PreferenceProvider } from "./src/contexts/PreferenceContext";
 import { ReportProvider } from "./src/contexts/ReportContext";
+import { ShelterDataProvider } from "./src/contexts/ShelterDataContext";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 
 export default function App() {
@@ -14,11 +16,15 @@ export default function App() {
       <View style={styles.webBackground}>
         <View style={styles.appFrame}>
           <FavoriteProvider>
-            <ReportProvider>
-              <NavigationContainer>
-                <RootNavigator />
-              </NavigationContainer>
-            </ReportProvider>
+            <PreferenceProvider>
+              <ShelterDataProvider>
+                <ReportProvider>
+                  <NavigationContainer>
+                    <RootNavigator />
+                  </NavigationContainer>
+                </ReportProvider>
+              </ShelterDataProvider>
+            </PreferenceProvider>
           </FavoriteProvider>
         </View>
       </View>

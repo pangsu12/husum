@@ -2,20 +2,17 @@ import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 
 import { mockShelters, RECOMMENDED_SHELTER_NAME } from "../data/mockShelters";
+import { Shelter } from "../types/shelter";
 import { FallbackMapView } from "./FallbackMapView";
 
 type Props = {
+  shelters?: Shelter[];
   selectedShelterId?: string;
   onSelectShelter: (shelterId: string) => void;
   onOpenShelter: (shelterId: string) => void;
 };
 
-type MapStatus =
-  | "client-id-missing"
-  | "sdk-loading"
-  | "sdk-loaded"
-  | "map-rendered"
-  | "sdk-failed";
+type MapStatus = "client-id-missing" | "sdk-loading" | "sdk-loaded" | "map-rendered" | "sdk-failed";
 
 type NaverLatLng = unknown;
 type NaverMap = {
@@ -28,10 +25,7 @@ type NaverMarker = {
 
 type NaverMaps = {
   LatLng: new (latitude: number, longitude: number) => NaverLatLng;
-  Map: new (
-    element: HTMLElement,
-    options: { center: NaverLatLng; zoom: number; minZoom?: number }
-  ) => NaverMap;
+  Map: new (element: HTMLElement, options: { center: NaverLatLng; zoom: number; minZoom?: number }) => NaverMap;
   Marker: new (options: {
     position: NaverLatLng;
     map: NaverMap;
@@ -59,12 +53,10 @@ declare global {
 
 const clientId = process.env.EXPO_PUBLIC_NAVER_MAP_CLIENT_ID?.trim();
 const SDK_SCRIPT_ID = "naver-map-sdk";
-const SDK_URL = clientId
-  ? `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`
-  : "";
+const SDK_URL = clientId ? `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}` : "";
 const CURRENT_LOCATION = { latitude: 37.6025, longitude: 127.0329 };
 
-function hasValidCoordinates(shelter: (typeof mockShelters)[number]) {
+function hasValidCoordinates(shelter: Shelter) {
   return (
     Number.isFinite(shelter.latitude) &&
     Number.isFinite(shelter.longitude) &&
@@ -80,21 +72,26 @@ function markerContent(color: string, selected = false) {
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:4px solid ${border};box-shadow:0 5px 14px rgba(15,23,42,.28);"></div>`;
 }
 
-function getFallbackLabel(status: MapStatus) {
-  if (status === "client-id-missing") {
-    return "fallback 지도 · 네이버 지도 Client ID가 없어 임시 지도를 표시합니다.";
-  }
+function hasNaverMapError(element: HTMLElement | null) {
+  const message = element?.textContent ?? "";
 
-  if (status === "sdk-loading") return "네이버 지도 SDK 로딩 중";
-  if (status === "sdk-loaded") return "네이버 지도 SDK 로드 성공 · 지도 생성 중";
-  if (status === "sdk-failed") {
-    return "임시 지도 · 네이버 지도 API 키가 없거나 로드되지 않아 임시 지도를 표시합니다.";
-  }
-
-  return "실제 네이버 지도 렌더링 완료";
+  return message.includes("Open API") || message.toLowerCase().includes("auth");
 }
 
-export function NaverMapWeb({ selectedShelterId, onSelectShelter, onOpenShelter }: Props) {
+function getMapStatusLabel(status: MapStatus) {
+  if (status === "map-rendered") return "현재 위치 주변 쉼터를 표시하고 있습니다.";
+  if (status === "sdk-loading") return "주변 쉼터 지도를 불러오는 중입니다.";
+  if (status === "sdk-loaded") return "주변 쉼터 정보를 지도에 표시하고 있습니다.";
+
+  return "현재 위치 주변 쉼터를 표시하고 있습니다.";
+}
+
+export function NaverMapWeb({
+  shelters = mockShelters,
+  selectedShelterId,
+  onSelectShelter,
+  onOpenShelter
+}: Props) {
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<NaverMap | null>(null);
   const markerRefs = useRef<NaverMarker[]>([]);
@@ -103,8 +100,8 @@ export function NaverMapWeb({ selectedShelterId, onSelectShelter, onOpenShelter 
   );
 
   const selectedShelter = useMemo(
-    () => mockShelters.find((shelter) => shelter.id === selectedShelterId) ?? mockShelters[0],
-    [selectedShelterId]
+    () => shelters.find((shelter) => shelter.id === selectedShelterId) ?? shelters[0] ?? mockShelters[0],
+    [selectedShelterId, shelters]
   );
 
   useEffect(() => {
@@ -154,7 +151,7 @@ export function NaverMapWeb({ selectedShelterId, onSelectShelter, onOpenShelter 
     }
 
     const maps = window.naver.maps;
-    const validShelters = mockShelters.filter(hasValidCoordinates);
+    const validShelters = shelters.filter(hasValidCoordinates);
 
     if (!hasValidCoordinates(selectedShelter) || validShelters.length === 0) {
       setStatus("sdk-failed");
@@ -180,7 +177,7 @@ export function NaverMapWeb({ selectedShelterId, onSelectShelter, onOpenShelter 
       const currentLocationMarker = new maps.Marker({
         position: new maps.LatLng(CURRENT_LOCATION.latitude, CURRENT_LOCATION.longitude),
         map,
-        title: "내 위치",
+        title: "현재 위치",
         icon: {
           content: markerContent("#2563eb", true),
           anchor: new maps.LatLng(17, 17)
@@ -205,27 +202,36 @@ export function NaverMapWeb({ selectedShelterId, onSelectShelter, onOpenShelter 
         markerRefs.current.push(marker);
       });
 
-      setStatus("map-rendered");
+      window.setTimeout(() => {
+        setStatus(hasNaverMapError(mapElementRef.current) ? "sdk-failed" : "map-rendered");
+      }, 300);
     } catch {
       setStatus("sdk-failed");
     }
-  }, [onSelectShelter, selectedShelter, status]);
+  }, [onSelectShelter, selectedShelter, shelters, status]);
 
   if (status === "sdk-failed" || status === "client-id-missing") {
     return (
       <FallbackMapView
+        shelters={shelters}
         selectedShelterId={selectedShelterId}
         onSelectShelter={onSelectShelter}
         onOpenShelter={onOpenShelter}
-        mapStatusLabel={getFallbackLabel(status)}
+        mapStatusLabel={getMapStatusLabel(status)}
       />
     );
   }
 
   return (
     <div style={styles.shell}>
-      <div style={styles.statusPill}>{getFallbackLabel(status)}</div>
-      <div ref={mapElementRef} style={styles.mapCanvas} />
+      <div style={styles.statusPill}>{getMapStatusLabel(status)}</div>
+      <div
+        ref={mapElementRef}
+        style={{
+          ...styles.mapCanvas,
+          visibility: status === "map-rendered" ? "visible" : "hidden"
+        }}
+      />
     </div>
   );
 }

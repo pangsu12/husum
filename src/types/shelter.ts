@@ -23,6 +23,7 @@ export type Shelter = {
   longitude: number;
   reportCount: number;
   positiveReportRate: number;
+  source?: "mock" | "api";
 };
 
 export type UserPreferences = {

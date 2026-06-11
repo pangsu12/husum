@@ -5,9 +5,25 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { NaverMapWeb } from "../components/NaverMapWeb";
-import { mockShelters, shelterTypeLabels } from "../data/mockShelters";
+import { usePreferenceSettings } from "../contexts/PreferenceContext";
+import { useShelterData } from "../contexts/ShelterDataContext";
 import { RootStackParamList, TabParamList } from "../navigation/navigationTypes";
-import { calculateShelterScore } from "../utils/recommendShelters";
+import {
+  calculateShelterScore,
+  getRecommendedShelters,
+  getShelterRecommendationReasons
+} from "../utils/recommendShelters";
+import {
+  comfortLabel,
+  crowdLabel,
+  formatRecommendationScore,
+  formatDistance,
+  getDisplayScore,
+  openLabel,
+  ScoreBar,
+  StatusPill,
+  Tag
+} from "./ShelterUi";
 import { colors, sharedStyles } from "./sharedStyles";
 
 type Props = CompositeScreenProps<
@@ -16,13 +32,21 @@ type Props = CompositeScreenProps<
 >;
 
 export function MapScreen({ navigation, route }: Props) {
-  const initialSelectedId = route.params?.selectedShelterId ?? "shelter-1";
+  const { shelters } = useShelterData();
+  const { preferences } = usePreferenceSettings();
+  const recommendedShelters = useMemo(() => getRecommendedShelters(shelters, preferences), [shelters, preferences]);
+  const initialSelectedId = route.params?.selectedShelterId ?? recommendedShelters[0]?.id ?? shelters[0]?.id;
   const [selectedShelterId, setSelectedShelterId] = useState(initialSelectedId);
   const selectedShelter = useMemo(
-    () => mockShelters.find((shelter) => shelter.id === selectedShelterId) ?? mockShelters[0],
-    [selectedShelterId]
+    () => shelters.find((shelter) => shelter.id === selectedShelterId) ?? recommendedShelters[0] ?? shelters[0],
+    [selectedShelterId, shelters, recommendedShelters]
   );
-  const selectedScore = calculateShelterScore(selectedShelter);
+  const selectedScore = selectedShelter ? calculateShelterScore(selectedShelter, preferences) : 0;
+  const selectedRankOffset = selectedShelter
+    ? Math.max(0, recommendedShelters.findIndex((shelter) => shelter.id === selectedShelter.id))
+    : 0;
+  const selectedDisplayScore = getDisplayScore(selectedScore, selectedRankOffset);
+  const selectedReasons = selectedShelter ? getShelterRecommendationReasons(selectedShelter, preferences) : [];
 
   useEffect(() => {
     if (route.params?.selectedShelterId) {
@@ -30,18 +54,42 @@ export function MapScreen({ navigation, route }: Props) {
     }
   }, [route.params?.selectedShelterId]);
 
+  useEffect(() => {
+    if (!shelters.some((shelter) => shelter.id === selectedShelterId) && recommendedShelters[0]) {
+      setSelectedShelterId(recommendedShelters[0].id);
+    }
+  }, [selectedShelterId, shelters, recommendedShelters]);
+
   const openDetail = (shelterId: string) => {
     navigation.navigate("ShelterDetail", { shelterId });
   };
 
+  const selectBestShelter = () => {
+    if (recommendedShelters[0]) setSelectedShelterId(recommendedShelters[0].id);
+  };
+
+  if (!selectedShelter) {
+    return (
+      <View style={[sharedStyles.screen, styles.center]}>
+        <Text style={sharedStyles.sectionTitle}>주변 쉼터 정보를 불러오는 중입니다.</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
-      <View style={styles.searchBar}>
-        <Text style={styles.searchIcon}>⌕</Text>
-        <Text style={styles.searchText}>쉼터명, 주소, 지역 검색</Text>
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.sectionTitle}>주변 쉼터 탐색</Text>
+        <Text style={[sharedStyles.muted, { marginTop: 6 }]}>
+          현재 위치 주변 쉼터를 표시하고 있습니다. 사용자 조건에 맞게 추천 순서를 계산합니다.
+        </Text>
+        <Pressable style={[sharedStyles.primaryButton, styles.findButton]} onPress={selectBestShelter}>
+          <Text style={sharedStyles.primaryButtonText}>내 위치 기준 최적 쉼터 찾기</Text>
+        </Pressable>
       </View>
 
       <NaverMapWeb
+        shelters={shelters}
         selectedShelterId={selectedShelter.id}
         onSelectShelter={setSelectedShelterId}
         onOpenShelter={openDetail}
@@ -49,34 +97,60 @@ export function MapScreen({ navigation, route }: Props) {
 
       <View style={sharedStyles.elevatedCard}>
         <View style={sharedStyles.row}>
-          <Text style={styles.selectedLabel}>선택된 쉼터</Text>
-          <Text style={styles.scoreBadge}>{selectedScore}점</Text>
+          <Text style={styles.selectedLabel}>내 위치 기준 추천 쉼터</Text>
+          <Text style={styles.scoreBadge}>{formatRecommendationScore(selectedScore, selectedRankOffset)}</Text>
         </View>
         <Text style={styles.selectedName}>{selectedShelter.name}</Text>
-        <Text style={sharedStyles.muted}>{shelterTypeLabels[selectedShelter.type]}</Text>
-        <Text style={[sharedStyles.body, styles.address]}>{selectedShelter.address}</Text>
-        <Text style={sharedStyles.muted}>
-          {selectedShelter.distanceMeters}m · 도보 {selectedShelter.walkMinutes}분 ·{" "}
-          {selectedShelter.isOpen ? "운영 중" : "운영 종료"}
+        <Text style={sharedStyles.muted}>{selectedShelter.address}</Text>
+
+        <View style={styles.scoreArea}>
+          <ScoreBar score={selectedDisplayScore} />
+        </View>
+
+        <View style={styles.statusRow}>
+          <StatusPill label={openLabel(selectedShelter.isOpen)} />
+          <StatusPill label={comfortLabel(selectedShelter.coolingStatus)} tone="blue" />
+          <StatusPill label={`혼잡도 ${crowdLabel(selectedShelter.crowdLevel)}`} tone="gray" />
+        </View>
+
+        <Text style={[sharedStyles.body, styles.address]}>
+          {formatDistance(selectedShelter.distanceMeters)} · 도보 {selectedShelter.walkMinutes}분
         </Text>
-        <Text style={[sharedStyles.muted, styles.hours]}>
-          운영 시간 {selectedShelter.operatingHours} · 추천 점수 {selectedScore}점
-        </Text>
-        <Pressable
-          style={[sharedStyles.primaryButton, { marginTop: 12 }]}
-          onPress={() => openDetail(selectedShelter.id)}
-        >
-          <Text style={sharedStyles.primaryButtonText}>상세 보기</Text>
-        </Pressable>
+
+        <View style={styles.tagWrap}>
+          {selectedReasons.map((reason) => (
+            <Tag key={reason} label={reason} tone={reason.includes("운영") ? "green" : "blue"} />
+          ))}
+        </View>
+
+        <View style={styles.buttonRow}>
+          <Pressable style={[sharedStyles.primaryButton, styles.flexButton]} onPress={() => openDetail(selectedShelter.id)}>
+            <Text style={sharedStyles.primaryButtonText}>상세 보기</Text>
+          </Pressable>
+          <Pressable
+            style={[sharedStyles.secondaryButton, styles.flexButton]}
+            onPress={() => setSelectedShelterId(selectedShelter.id)}
+          >
+            <Text style={sharedStyles.secondaryButtonText}>경로 보기</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.outlineButton, styles.flexButton]}
+            onPress={() => navigation.navigate("Report", { shelterId: selectedShelter.id })}
+          >
+            <Text style={styles.outlineButtonText}>상태 제보</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.listHeader}>
-        <Text style={sharedStyles.sectionTitle}>주변 쉼터</Text>
-        <Text style={sharedStyles.muted}>추천 쉼터는 지도에서 노란 테두리로 강조됩니다.</Text>
+        <Text style={sharedStyles.sectionTitle}>추천 순서</Text>
+        <Text style={sharedStyles.muted}>주변 쉼터 정보를 불러와 현재 위치와 사용자 조건에 맞게 추천합니다.</Text>
       </View>
 
-      {mockShelters.map((shelter) => {
+      {recommendedShelters.map((shelter, index) => {
         const selected = shelter.id === selectedShelter.id;
+        const score = calculateShelterScore(shelter, preferences);
+        const displayScore = getDisplayScore(score, index);
 
         return (
           <Pressable
@@ -86,15 +160,14 @@ export function MapScreen({ navigation, route }: Props) {
           >
             <View style={sharedStyles.row}>
               <Text style={styles.shelterName}>{shelter.name}</Text>
-              <Text style={styles.scoreBadge}>{calculateShelterScore(shelter)}점</Text>
+              <Text style={styles.scoreBadge}>{formatRecommendationScore(score, index)}</Text>
             </View>
-            <Text style={sharedStyles.muted}>
-              {shelterTypeLabels[shelter.type]} · {shelter.distanceMeters}m · 도보{" "}
-              {shelter.walkMinutes}분 · {shelter.isOpen ? "운영 중" : "운영 종료"}
+            <Text style={[sharedStyles.muted, { marginTop: 6 }]}>
+              {formatDistance(shelter.distanceMeters)} · 도보 {shelter.walkMinutes}분 · {openLabel(shelter.isOpen)}
             </Text>
-            <Pressable style={styles.inlineButton} onPress={() => openDetail(shelter.id)}>
-              <Text style={styles.inlineButtonText}>상세 보기</Text>
-            </Pressable>
+            <View style={styles.smallScore}>
+              <ScoreBar score={displayScore} />
+            </View>
           </Pressable>
         );
       })}
@@ -103,26 +176,13 @@ export function MapScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  searchBar: {
-    height: 48,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    flexDirection: "row",
+  center: {
     alignItems: "center",
-    gap: 9,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: colors.line
+    justifyContent: "center",
+    padding: 20
   },
-  searchIcon: {
-    color: colors.blue,
-    fontSize: 22,
-    fontWeight: "900"
-  },
-  searchText: {
-    color: colors.muted,
-    fontSize: 14,
-    fontWeight: "800"
+  findButton: {
+    marginTop: 12
   },
   selectedLabel: {
     color: colors.blue,
@@ -130,18 +190,54 @@ const styles = StyleSheet.create({
   },
   selectedName: {
     color: colors.text,
-    fontSize: 19,
-    lineHeight: 26,
+    fontSize: 20,
+    lineHeight: 27,
     marginTop: 8,
     marginBottom: 6,
     fontWeight: "900"
   },
   address: {
-    marginTop: 8,
-    marginBottom: 5
+    marginTop: 10
   },
-  hours: {
-    marginTop: 5
+  scoreArea: {
+    marginTop: 12
+  },
+  statusRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginTop: 12
+  },
+  tagWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginTop: 12
+  },
+  buttonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 14
+  },
+  flexButton: {
+    flexGrow: 1,
+    minWidth: 105
+  },
+  outlineButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+    borderColor: colors.line,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 14
+  },
+  outlineButtonText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "900"
   },
   listHeader: {
     gap: 4,
@@ -167,19 +263,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     fontWeight: "900"
   },
-  inlineButton: {
-    alignSelf: "flex-start",
-    marginTop: 10,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: colors.line
-  },
-  inlineButtonText: {
-    color: colors.blue,
-    fontSize: 12,
-    fontWeight: "900"
+  smallScore: {
+    marginTop: 10
   }
 });

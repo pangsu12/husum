@@ -1,10 +1,12 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { mockShelters, shelterTypeLabels } from "../data/mockShelters";
+import { formatDistance, openLabel } from "../screens/ShelterUi";
 import { colors } from "../screens/sharedStyles";
 import { Shelter } from "../types/shelter";
 
 type Props = {
+  shelters?: Shelter[];
   selectedShelterId?: string;
   onSelectShelter: (shelterId: string) => void;
   onOpenShelter: (shelterId: string) => void;
@@ -26,19 +28,20 @@ const markerPositions = [
 ] as const;
 
 export function FallbackMapView({
+  shelters = mockShelters,
   selectedShelterId,
   onSelectShelter,
   onOpenShelter,
-  mapStatusLabel = "임시 지도 · 네이버 지도 API 키가 없거나 로드되지 않아 임시 지도를 표시합니다."
+  mapStatusLabel = "현재 위치 주변 쉼터를 표시하고 있습니다."
 }: Props) {
   const selectedShelter =
-    mockShelters.find((shelter) => shelter.id === selectedShelterId) ?? mockShelters[0];
+    shelters.find((shelter) => shelter.id === selectedShelterId) ?? shelters[0] ?? mockShelters[0];
 
   return (
     <View style={styles.shell}>
       <View style={styles.mapHeader}>
         <Text style={styles.mapStatus}>{mapStatusLabel}</Text>
-        <Text style={styles.mapScale}>성북구 종암동 주변</Text>
+        <Text style={styles.mapScale}>서울 성북구 주변</Text>
       </View>
       <View style={styles.mapCanvas}>
         <View style={[styles.road, styles.roadOne]} />
@@ -52,7 +55,7 @@ export function FallbackMapView({
         <View style={styles.currentMarker}>
           <View style={styles.currentMarkerCore} />
         </View>
-        {mockShelters.map((shelter, index) => {
+        {shelters.slice(0, markerPositions.length).map((shelter, index) => {
           const selected = shelter.id === selectedShelter.id;
           const recommended = shelter.id === "shelter-1";
 
@@ -86,8 +89,8 @@ export function FallbackMapView({
           </Text>
         </View>
         <Text style={styles.placeMeta}>
-          {selectedShelter.address} · 도보 {selectedShelter.walkMinutes}분 ·{" "}
-          {selectedShelter.isOpen ? "운영 중" : "운영 종료"}
+          {selectedShelter.address} · {formatDistance(selectedShelter.distanceMeters)} · 도보{" "}
+          {selectedShelter.walkMinutes}분 · {openLabel(selectedShelter.isOpen)}
         </Text>
       </Pressable>
     </View>

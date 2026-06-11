@@ -1,0 +1,6 @@
+﻿region,weather_risk_score,heatwave_score,heat_illness_score,elderly_score,integrated_heat_risk_score
+대구,100.0,100.0,13.93,50.77,71.1
+서울,34.09,32.02,100.0,24.62,48.63
+대전,66.2,63.48,0.0,4.62,39.73
+광주,53.28,50.0,7.56,0.0,33.04
+부산,0.0,0.0,36.84,100.0,24.21

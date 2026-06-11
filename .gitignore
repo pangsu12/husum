@@ -9,3 +9,9 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+*.log
+expo-web-*.log
+expo-web-*.err.log
+docs/design/*/
+!docs/design/*.zip

@@ -1,49 +1,71 @@
 import { ReactNode, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import {
+  preferenceTags,
+  routePreferences,
+  usePreferenceSettings
+} from "../contexts/PreferenceContext";
+import { UserPreferences } from "../types/shelter";
+import { Tag } from "./ShelterUi";
 import { colors, sharedStyles } from "./sharedStyles";
 
-const tags = [
-  "어르신",
-  "영유아 동반",
-  "임산부",
-  "야외근로자",
-  "반려동물 동반",
-  "보행이 불편함",
-  "대중교통 이용",
-  "보호자 알림 필요"
+const tagOptions = [
+  preferenceTags.senior,
+  preferenceTags.infant,
+  preferenceTags.disabled,
+  preferenceTags.outdoorWorker,
+  preferenceTags.pregnant,
+  preferenceTags.pet,
+  preferenceTags.mobility,
+  preferenceTags.transit
 ];
 
-const routes = ["최단 거리 우선", "계단/경사 최소화", "그늘길·실내 경유 우선"];
-const alerts = ["폭염·한파 위험 알림", "쉼터 운영 변경 알림", "정기 리마인더"];
+const routeOptions: Array<{ key: NonNullable<UserPreferences["routePreference"]>; label: string }> = [
+  { key: "shortest", label: routePreferences.shortest },
+  { key: "accessible", label: routePreferences.accessible },
+  { key: "shade", label: routePreferences.shade }
+];
 
 export function PreferenceScreen() {
-  const [selectedTags, setSelectedTags] = useState<string[]>(["어르신", "보행이 불편함"]);
-  const [selectedRoute, setSelectedRoute] = useState(routes[1]);
-  const [selectedAlerts, setSelectedAlerts] = useState<string[]>([alerts[0]]);
+  const { preferences, setPreferences } = usePreferenceSettings();
+  const [selectedTags, setSelectedTags] = useState<string[]>(preferences.tags);
+  const [selectedRoute, setSelectedRoute] = useState<NonNullable<UserPreferences["routePreference"]>>(
+    preferences.routePreference ?? "accessible"
+  );
 
-  const toggle = (value: string, setter: (next: string[]) => void, current: string[]) => {
-    setter(current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  const toggleTag = (value: string) => {
+    setSelectedTags((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value]
+    );
+  };
+
+  const save = () => {
+    setPreferences({ tags: selectedTags, routePreference: selectedRoute });
+    Alert.alert("맞춤 설정 저장", "선택한 조건을 쉼터 추천 점수에 반영합니다.");
   };
 
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
       <View style={sharedStyles.elevatedCard}>
-        <Text style={sharedStyles.sectionTitle}>나에게 맞는 쉼터 찾기</Text>
-        <Text style={[sharedStyles.muted, { marginTop: 8 }]}>
-          선택한 조건에 따라 거리, 접근성, 혼잡도, 편의시설 추천 기준이 달라집니다.
+        <Text style={sharedStyles.sectionTitle}>내 상황에 맞는 쉼터 추천</Text>
+        <Text style={[sharedStyles.body, { marginTop: 8 }]}>
+          내 상황에 맞는 쉼터를 추천받기 위해 해당되는 항목을 선택하세요.
+        </Text>
+        <Text style={[sharedStyles.muted, { marginTop: 6 }]}>
+          선택한 조건은 쉼터 추천 점수에 반영됩니다.
         </Text>
       </View>
 
-      <Section title="사용자 상황">
+      <Section title="선택 항목">
         <View style={styles.wrap}>
-          {tags.map((tag) => {
+          {tagOptions.map((tag) => {
             const active = selectedTags.includes(tag);
             return (
               <Pressable
                 key={tag}
                 style={[styles.tag, active && styles.tagActive]}
-                onPress={() => toggle(tag, setSelectedTags, selectedTags)}
+                onPress={() => toggleTag(tag)}
               >
                 <Text style={[styles.tagText, active && styles.tagTextActive]}>{tag}</Text>
               </Pressable>
@@ -52,38 +74,29 @@ export function PreferenceScreen() {
         </View>
       </Section>
 
-      <Section title="선호 이동 조건">
-        {routes.map((route) => (
+      <Section title="이동 선호">
+        {routeOptions.map((route) => (
           <Pressable
-            key={route}
-            style={[styles.option, selectedRoute === route && styles.optionActive]}
-            onPress={() => setSelectedRoute(route)}
+            key={route.key}
+            style={[styles.option, selectedRoute === route.key && styles.optionActive]}
+            onPress={() => setSelectedRoute(route.key)}
           >
-            <Text style={[styles.optionText, selectedRoute === route && styles.optionTextActive]}>
-              {route}
+            <Text style={[styles.optionText, selectedRoute === route.key && styles.optionTextActive]}>
+              {route.label}
             </Text>
           </Pressable>
         ))}
       </Section>
 
-      <Section title="알림 설정">
-        {alerts.map((item) => (
-          <Pressable
-            key={item}
-            style={[styles.option, selectedAlerts.includes(item) && styles.optionActive]}
-            onPress={() => toggle(item, setSelectedAlerts, selectedAlerts)}
-          >
-            <Text style={[styles.optionText, selectedAlerts.includes(item) && styles.optionTextActive]}>
-              {item}
-            </Text>
-          </Pressable>
-        ))}
-      </Section>
+      <View style={sharedStyles.card}>
+        <Text style={sharedStyles.sectionTitle}>현재 선택</Text>
+        <View style={styles.wrap}>
+          {selectedTags.length === 0 ? <Tag label="선택 조건 없음" tone="gray" /> : selectedTags.map((tag) => <Tag key={tag} label={tag} tone="blue" />)}
+          <Tag label={routePreferences[selectedRoute]} tone="green" />
+        </View>
+      </View>
 
-      <Pressable
-        style={sharedStyles.primaryButton}
-        onPress={() => Alert.alert("저장 완료", "맞춤 설정이 저장되었습니다. 추천 결과에 반영됩니다.")}
-      >
+      <Pressable style={sharedStyles.primaryButton} onPress={save}>
         <Text style={sharedStyles.primaryButtonText}>맞춤 설정 저장</Text>
       </Pressable>
     </ScrollView>
@@ -107,8 +120,8 @@ const styles = StyleSheet.create({
   },
   tag: {
     borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: colors.line
@@ -120,7 +133,7 @@ const styles = StyleSheet.create({
   tagText: {
     color: colors.text,
     fontSize: 13,
-    fontWeight: "800"
+    fontWeight: "900"
   },
   tagTextActive: {
     color: "#ffffff"
@@ -129,7 +142,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.line,
-    padding: 12,
+    padding: 13,
     backgroundColor: "#ffffff"
   },
   optionActive: {
@@ -138,7 +151,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     color: colors.text,
-    fontWeight: "800"
+    fontWeight: "900"
   },
   optionTextActive: {
     color: colors.blue

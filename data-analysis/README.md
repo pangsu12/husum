@@ -1,141 +1,93 @@
-# 휴숨 실제 공공데이터 분석 폴더
+# 휴숨 데이터 분석 폴더
 
-이 폴더는 휴숨 앱의 추천 알고리즘과 보고서 작성을 위한 실제 공공데이터 분석 작업 공간입니다. 앱 코드는 수정하지 않고, 원본 CSV/XLSX/API 응답을 `data-analysis/raw`에 넣은 뒤 Python 스크립트로 분석합니다.
+이 폴더는 휴숨 MVP의 폭염 위험도와 쉼터 추천 근거를 만들기 위한 실제 CSV/XLSX 분석 작업 공간입니다. 앱 화면 코드는 `src`에 두고, 원본 데이터와 분석 스크립트, 산출물은 `data-analysis`에서 관리합니다.
 
-## 폴더 구조
-
-```text
-data-analysis/
-  raw/       실제 CSV, XLSX, API 원본 응답 저장
-  output/    분석 결과 md 파일과 그래프 저장
-  scripts/   데이터 수집 및 분석 스크립트
-```
-
-## .env 설정
-
-프로젝트 루트의 `.env` 파일에 API 키를 저장합니다. API 키는 코드에 직접 쓰지 않습니다.
-
-```env
-SHELTER_API_KEY=발급받은_무더위쉼터_API_키
-WEATHER_API_KEY=발급받은_기상청_API_키
-AIR_QUALITY_API_KEY=발급받은_에어코리아_API_키
-```
-
-## 무더위쉼터 데이터 분석 완료
-
-현재 `행정안전부_무더위쉼터.csv` 실제 데이터 100개 분석이 완료되어 있습니다.
-
-- 전체 쉼터 수: 100개
-- 평균 이용가능인원: 27.7명
-- 총 이용가능인원: 2,773명
-- 총 에어컨 수: 211대
-- 총 선풍기 수: 209대
-- 지역 상위: 경상남도 하동군 6개, 전북특별자치도 고창군 5개, 경상남도 진주시 4개
-- 이용가능인원 1위: 봉담도서관 139명
-- 에어컨 수 1위: 봉담도서관 82대
+## 실행
 
 ```bash
-python data-analysis/scripts/analyze_real_shelter_data.py
+cd data-analysis
+py scripts/analyze_heat_risk.py
 ```
 
-## 기상 데이터 수집
+## output 파일
 
-기상청_단기예보 조회서비스의 초단기실황조회와 초단기예보조회를 호출합니다. 기본 위치는 대전 기준 `nx=67`, `ny=100`입니다.
+- `output/analysis_result.json`
+- `output/summary.md`
+- `output/weather_region_summary.csv`
+- `output/heatwave_region_summary.csv`
+- `output/heat_illness_region_summary.csv`
+- `output/vulnerable_region_summary.csv`
+- `output/integrated_heat_risk_by_region.csv`
+- `output/weather_temperature_trend.png`
+- `output/heat_illness_trend.png`
+- `output/heatwave_days_by_region.png`
+- `output/elderly_rate_by_region.png`
+- `output/integrated_heat_risk_by_region.png`
 
-```bash
-python data-analysis/scripts/fetch_weather_api.py
-```
+## 핵심 결과
 
-생성되는 raw 파일:
+- 분석 기간: 2020~2025년 여름철
+- 분석 지역: 서울, 대전, 대구, 부산, 광주
+- 평균 최고기온: 29.54도
+- 평균 습도: 76.47%
+- 최고기온 33도 이상 일수: 706일
+- 총 온열질환자 수: 2,516명
+- 온열질환 최다 날짜: 2025-07-08, 39명
+- 최고기온-온열질환 상관관계: 0.4057
+- 폭염일수 최다 지역: 대구, 233일
+- 고령인구 비율 최고 지역: 부산, 25.3%
+- 종합 폭염 취약도 최고 지역: 대구, 71.1점
 
-```text
-data-analysis/raw/weather_ultra_srt_ncst_raw.json
-data-analysis/raw/weather_ultra_srt_fcst_raw.json
-data-analysis/raw/weather.csv
-```
+## 지역별 종합 폭염 취약도
 
-`weather.csv` 컬럼:
+1. 대구: 71.1점
+2. 서울: 48.63점
+3. 대전: 39.73점
+4. 광주: 33.04점
+5. 부산: 24.21점
 
-```text
-datetime, region, nx, ny, temperature, humidity, wind_speed, rainfall,
-sky, precipitation_type, apparent_temperature, heat_risk_score, source
-```
+## 사용한 raw 파일
 
-## 대기질 데이터 수집
+- `asos_weather.csv`
+- `asos_daegu.csv`
+- `heat_illness.csv`
+- `heatwave_seoul.csv`
+- `heatwave_daejeon.csv`
+- `heatwave_daegu.csv`
+- `heatwave_busan.csv`
+- `heatwave_gwangju.csv`
+- `kosis_elderly.csv`
+- `kosis_children.csv`
+- `kosis_single_household.xlsx`
+- `행정안전부_무더위쉼터.csv`는 보조 분석으로만 사용
 
-한국환경공단_에어코리아_대기오염정보의 시도별 실시간 측정정보조회를 호출합니다. 기본 지역은 대전입니다.
+## 실제 분석값과 확장 예정 예시 구분
 
-```bash
-python data-analysis/scripts/fetch_air_quality_api.py
-```
+현재 앱 분석 탭에는 `analysis_result.json`의 실제 분석값을 우선 반영합니다.
 
-생성되는 raw 파일:
+실제 반영값:
 
-```text
-data-analysis/raw/air_quality_raw.json
-data-analysis/raw/air_quality.csv
-```
+- 지역별 종합 폭염 취약도
+- 평균 최고기온, 평균 습도, 33도 이상 일수
+- 총 온열질환자 수와 최다 날짜
+- 최고기온-온열질환 상관관계
+- 폭염일수 최다 지역
+- 고령인구 비율 최고 지역
+- 무더위쉼터 보조 분석
 
-`air_quality.csv` 컬럼:
+확장 예정 예시:
 
-```text
-datetime, region, station, pm10, pm25, ozone,
-air_quality_index, air_risk_score, source
-```
+- 어린이/유소년 지역별 비율
+- 1인가구 지역별 비율
+- 통합대피소 API 기반 실시간 쉼터 후보
+- 기상특보 API 기반 최신 위험도 보정
 
-## 수동 파일 추가
+## 취약계층 지표 처리
 
-API 대신 실제 CSV/XLSX 파일을 직접 넣어도 분석할 수 있습니다.
+지역별 종합 폭염 취약도에는 `kosis_elderly.csv`의 고령인구 비율을 사용합니다. 고령층은 폭염 건강 피해에 취약하고, 현재 파일 구조가 지역별 병합에 적합하기 때문입니다.
 
-기상 파일명 예:
+`kosis_children.csv`와 `kosis_single_household.xlsx`는 현재 전국 단위 구조라 서울·대전·대구·부산·광주 지역별 위험도 계산에는 포함하지 않았습니다.
 
-```text
-data-analysis/raw/weather.csv
-data-analysis/raw/weather.xlsx
-data-analysis/raw/기상.csv
-data-analysis/raw/날씨.xlsx
-data-analysis/raw/폭염.csv
-```
+## 앱 반영
 
-대기질 파일명 예:
-
-```text
-data-analysis/raw/air_quality.csv
-data-analysis/raw/air_quality.xlsx
-data-analysis/raw/대기질.csv
-data-analysis/raw/에어코리아.xlsx
-data-analysis/raw/미세먼지.csv
-```
-
-## 통합 분석
-
-```bash
-python data-analysis/scripts/analyze_weather_air_quality.py
-```
-
-기상 또는 대기질 실제 CSV/XLSX 파일이 없으면 샘플 데이터를 만들지 않고 다음 안내만 출력합니다.
-
-```text
-data-analysis/raw 폴더에 기상 또는 대기질 실제 CSV/XLSX 파일을 넣어주세요.
-```
-
-생성되는 output 파일:
-
-```text
-data-analysis/output/weather_air_quality_analysis_summary.md
-data-analysis/output/hourly_temperature.png
-data-analysis/output/hourly_heat_risk.png
-data-analysis/output/air_quality_risk.png
-data-analysis/output/climate_air_total_risk.png
-```
-
-## 분석 기준
-
-- 폭염 위험도는 기온, 습도, 체감온도를 기반으로 `heat_risk_score` 0~100점으로 계산합니다.
-- 대기질 위험도는 미세먼지, 초미세먼지, 오존, 통합대기환경지수를 기반으로 `air_risk_score` 0~100점으로 계산합니다.
-- 통합 이동 위험도는 `climate_air_total_risk = heat_risk_score + air_risk_score` 기준으로 계산합니다.
-- 종합 이동 위험도가 높은 시간대에는 가까운 쉼터와 냉방 설비가 좋은 쉼터를 우선 추천하는 방향으로 앱 추천 알고리즘에 반영할 수 있습니다.
-
-## 오류 처리
-
-API 호출 실패 시 스크립트는 상태코드, 응답 본문 일부, 실패 원인 추정을 출력합니다. 인증키 원문은 출력하지 않습니다.
+분석 결과는 앱 분석 탭에 반영됩니다. 통합대피소 API는 지도 마커와 쉼터 추천 후보 생성에 활용할 예정이며, 시민 제보와 맞춤 설정은 추천 점수 보정에 연결됩니다.

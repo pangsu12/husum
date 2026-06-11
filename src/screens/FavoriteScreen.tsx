@@ -2,15 +2,20 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { useFavorites } from "../contexts/FavoriteContext";
-import { mockShelters, shelterTypeLabels } from "../data/mockShelters";
+import { useShelterData } from "../contexts/ShelterDataContext";
+import { shelterTypeLabels } from "../data/mockShelters";
 import { RootStackParamList } from "../navigation/navigationTypes";
+import { formatDistance, openLabel } from "./ShelterUi";
 import { colors, sharedStyles } from "./sharedStyles";
 
 type Props = NativeStackScreenProps<RootStackParamList>;
 
 export function FavoriteScreen({ navigation }: Props) {
   const { favoriteIds } = useFavorites();
-  const favoriteShelters = mockShelters.filter((shelter) => favoriteIds.includes(shelter.id));
+  const { findShelter } = useShelterData();
+  const favoriteShelters = favoriteIds
+    .map((shelterId) => findShelter(shelterId))
+    .filter((shelter): shelter is NonNullable<typeof shelter> => Boolean(shelter));
 
   if (favoriteShelters.length === 0) {
     return (
@@ -20,7 +25,7 @@ export function FavoriteScreen({ navigation }: Props) {
             아직 즐겨찾기한 쉼터가 없습니다.
           </Text>
           <Text style={[sharedStyles.muted, { textAlign: "center" }]}>
-            쉼터 상세 화면에서 자주 이용하는 쉼터를 저장해보세요.
+            자주 이용하는 쉼터를 상세 화면에서 즐겨찾기에 추가해 보세요.
           </Text>
         </View>
       </View>
@@ -29,7 +34,7 @@ export function FavoriteScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
-      <Text style={sharedStyles.sectionTitle}>즐겨찾기한 쉼터</Text>
+      <Text style={sharedStyles.sectionTitle}>즐겨찾기 쉼터</Text>
       {favoriteShelters.map((shelter) => (
         <Pressable
           key={shelter.id}
@@ -38,8 +43,8 @@ export function FavoriteScreen({ navigation }: Props) {
         >
           <Text style={{ color: colors.text, fontSize: 17, fontWeight: "900" }}>{shelter.name}</Text>
           <Text style={[sharedStyles.muted, { marginTop: 6 }]}>
-            {shelterTypeLabels[shelter.type]} · 도보 {shelter.walkMinutes}분 ·{" "}
-            {shelter.isOpen ? "운영 중" : "운영 종료"}
+            {shelterTypeLabels[shelter.type]} · {formatDistance(shelter.distanceMeters)} · 도보{" "}
+            {shelter.walkMinutes}분 · {openLabel(shelter.isOpen)}
           </Text>
         </Pressable>
       ))}

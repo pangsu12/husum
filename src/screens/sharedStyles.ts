@@ -22,7 +22,7 @@ export const sharedStyles = StyleSheet.create({
   },
   content: {
     padding: 14,
-    paddingBottom: 22,
+    paddingBottom: 112,
     gap: 11
   },
   card: {
@@ -119,5 +119,17 @@ export const sharedStyles = StyleSheet.create({
     paddingVertical: 6,
     fontSize: 12,
     fontWeight: "900"
+  },
+  metricNumber: {
+    color: colors.text,
+    fontSize: 24,
+    lineHeight: 31,
+    fontWeight: "900"
+  },
+  metricLabel: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "800"
   }
 });

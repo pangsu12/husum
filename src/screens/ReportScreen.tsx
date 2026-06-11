@@ -10,12 +10,12 @@ import { colors, sharedStyles } from "./sharedStyles";
 type Props = NativeStackScreenProps<RootStackParamList, "Report">;
 
 const groups = [
-  { key: "isOpen", title: "운영 상태", trueText: "운영 중", falseText: "문 닫음" },
-  { key: "coolingGood", title: "냉방 상태", trueText: "냉방 좋음", falseText: "냉방 약함" },
-  { key: "heatingGood", title: "난방 상태", trueText: "난방 좋음", falseText: "난방 약함" },
+  { key: "isOpen", title: "운영 상태", trueText: "운영 중", falseText: "문 닫힘" },
+  { key: "coolingGood", title: "냉방 상태", trueText: "냉방 잘 됨", falseText: "냉방 약함" },
+  { key: "heatingGood", title: "난방 상태", trueText: "난방 잘 됨", falseText: "난방 약함" },
   { key: "crowded", title: "혼잡도", trueText: "혼잡함", falseText: "여유 있음" },
-  { key: "hasWater", title: "물 제공 여부", trueText: "제공", falseText: "미제공" },
-  { key: "wheelchairAccessible", title: "휠체어 접근", trueText: "가능", falseText: "불가" },
+  { key: "hasWater", title: "물 제공", trueText: "물 제공", falseText: "미제공" },
+  { key: "wheelchairAccessible", title: "휠체어 접근", trueText: "접근 가능", falseText: "접근 불가능" },
   { key: "hasRiskyRoute", title: "위험 경로", trueText: "있음", falseText: "없음" }
 ] as const;
 
@@ -41,9 +41,7 @@ export function ReportScreen({ navigation, route }: Props) {
       <View style={[sharedStyles.screen, styles.centerContent]}>
         <View style={sharedStyles.elevatedCard}>
           <Text style={styles.completeTitle}>쉼터 정보를 찾을 수 없습니다.</Text>
-          <Text style={[sharedStyles.muted, { marginTop: 8 }]}>
-            지도 화면에서 쉼터를 다시 선택해주세요.
-          </Text>
+          <Text style={[sharedStyles.muted, { marginTop: 8 }]}>지도 화면에서 쉼터를 다시 선택해 주세요.</Text>
         </View>
         <Pressable style={sharedStyles.primaryButton} onPress={() => navigation.navigate("MainTabs", { screen: "Map" })}>
           <Text style={sharedStyles.primaryButtonText}>지도 화면으로 돌아가기</Text>
@@ -63,9 +61,9 @@ export function ReportScreen({ navigation, route }: Props) {
     return (
       <View style={[sharedStyles.screen, styles.centerContent]}>
         <View style={sharedStyles.elevatedCard}>
-          <Text style={styles.completeTitle}>제보가 반영되었습니다.</Text>
+          <Text style={styles.completeTitle}>제보가 접수되었습니다.</Text>
           <Text style={[sharedStyles.body, { marginTop: 10 }]}>
-            시민 제보는 쉼터 추천 점수와 분석 화면에 반영됩니다.
+            알려주신 쉼터 상태는 다른 사용자의 추천 정확도를 높이는 데 반영됩니다.
           </Text>
           <Text style={[sharedStyles.muted, { marginTop: 8 }]}>{shelter.name}</Text>
         </View>
@@ -75,12 +73,6 @@ export function ReportScreen({ navigation, route }: Props) {
           onPress={() => navigation.replace("ShelterDetail", { shelterId: shelter.id })}
         >
           <Text style={sharedStyles.primaryButtonText}>쉼터 상세로 돌아가기</Text>
-        </Pressable>
-        <Pressable
-          style={sharedStyles.secondaryButton}
-          onPress={() => navigation.navigate("MainTabs", { screen: "Analytics" })}
-        >
-          <Text style={sharedStyles.secondaryButtonText}>분석 탭에서 확인하기</Text>
         </Pressable>
       </View>
     );
@@ -92,7 +84,7 @@ export function ReportScreen({ navigation, route }: Props) {
         <Text style={sharedStyles.sectionTitle}>쉼터 상태 제보</Text>
         <Text style={[sharedStyles.body, { marginTop: 8 }]}>{shelter.name}</Text>
         <Text style={[sharedStyles.muted, { marginTop: 6 }]}>
-          시민 제보는 쉼터 정보 정확도와 추천 점수 분석에 사용됩니다.
+          쉼터 상태를 알려주시면 다른 사용자의 추천 정확도를 높이는 데 도움이 됩니다.
         </Text>
       </View>
 
@@ -114,7 +106,7 @@ export function ReportScreen({ navigation, route }: Props) {
         </View>
       ))}
 
-      <Pressable style={sharedStyles.primaryButton} onPress={submit}>
+      <Pressable style={[sharedStyles.primaryButton, styles.submitButton]} onPress={submit}>
         <Text style={sharedStyles.primaryButtonText}>제보 제출</Text>
       </Pressable>
     </ScrollView>
@@ -162,9 +154,12 @@ const styles = StyleSheet.create({
   segmentText: {
     color: colors.muted,
     fontSize: 13,
-    fontWeight: "800"
+    fontWeight: "900"
   },
   segmentTextActive: {
     color: "#ffffff"
+  },
+  submitButton: {
+    marginTop: 4
   }
 });

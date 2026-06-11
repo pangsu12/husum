@@ -1,7 +1,7 @@
 import { CrowdLevel, FacilityStatus, Shelter, ShelterType } from "../types/shelter";
 
 export const RECOMMENDED_SHELTER_NAME = "성북종합사회복지관 무더위쉼터";
-export const PUBLIC_DATA_EXAMPLE_NAME = "봉담도서관";
+export const PUBLIC_DATA_EXAMPLE_NAME = "보문동 주민센터 쉼터";
 
 export const mockShelters: Shelter[] = [
   {
@@ -26,7 +26,7 @@ export const mockShelters: Shelter[] = [
   },
   {
     id: "shelter-2",
-    name: "길음1동 주민센터 기후쉼터",
+    name: "길음1동 주민센터 쉼터",
     type: "public",
     address: "서울 성북구 길음로 92",
     distanceMeters: 480,
@@ -46,7 +46,7 @@ export const mockShelters: Shelter[] = [
   },
   {
     id: "shelter-3",
-    name: "정릉 어르신문화센터 한파쉼터",
+    name: "정릉 어르신문화센터 쉼터",
     type: "heating",
     address: "서울 성북구 정릉로 242",
     distanceMeters: 760,
@@ -66,7 +66,7 @@ export const mockShelters: Shelter[] = [
   },
   {
     id: "shelter-4",
-    name: "성북천 반려동물 동행 카페쉼터",
+    name: "성북천 반려동물 동행 쉼터",
     type: "private",
     address: "서울 성북구 동소문로 45",
     distanceMeters: 620,
@@ -96,11 +96,11 @@ export const shelterTypeLabels: Record<ShelterType, string> = {
 export const crowdLevelLabels: Record<CrowdLevel, string> = {
   low: "여유 있음",
   medium: "보통",
-  high: "혼잡함"
+  high: "혼잡"
 };
 
 export const facilityStatusLabels: Record<FacilityStatus, string> = {
   good: "좋음",
-  weak: "약함",
-  none: "없음"
+  weak: "보통",
+  none: "확인 필요"
 };
