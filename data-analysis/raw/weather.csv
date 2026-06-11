@@ -1,0 +1,8 @@
+﻿datetime,region,nx,ny,temperature,humidity,wind_speed,rainfall,sky,precipitation_type,apparent_temperature,heat_risk_score,source
+2026-06-06 18:00:00,대전,67,100,26.7,35.0,2.8,0.0,,0,26.7,0.0,getUltraSrtNcst
+2026-06-06 19:00:00,대전,67,100,27.0,30.0,3.0,0.0,1,0,27.0,0.0,getUltraSrtFcst
+2026-06-06 20:00:00,대전,67,100,26.0,40.0,3.0,0.0,3,0,26.0,0.0,getUltraSrtFcst
+2026-06-06 21:00:00,대전,67,100,24.0,40.0,4.0,0.0,3,0,24.0,0.0,getUltraSrtFcst
+2026-06-06 22:00:00,대전,67,100,23.0,50.0,4.0,0.0,3,0,23.0,0.0,getUltraSrtFcst
+2026-06-06 23:00:00,대전,67,100,21.0,50.0,4.0,0.0,1,0,21.0,0.0,getUltraSrtFcst
+2026-06-07 00:00:00,대전,67,100,21.0,60.0,4.0,0.0,1,0,21.0,0.0,getUltraSrtFcst

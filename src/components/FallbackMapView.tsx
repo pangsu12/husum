@@ -1,0 +1,314 @@
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+import { mockShelters, shelterTypeLabels } from "../data/mockShelters";
+import { colors } from "../screens/sharedStyles";
+import { Shelter } from "../types/shelter";
+
+type Props = {
+  selectedShelterId?: string;
+  onSelectShelter: (shelterId: string) => void;
+  onOpenShelter: (shelterId: string) => void;
+  mapStatusLabel?: string;
+};
+
+const markerColors: Record<Shelter["type"], string> = {
+  cooling: colors.blue,
+  heating: colors.warning,
+  public: colors.green,
+  private: colors.purple
+};
+
+const markerPositions = [
+  { top: "24%", left: "25%" },
+  { top: "42%", left: "65%" },
+  { top: "64%", left: "39%" },
+  { top: "28%", left: "78%" }
+] as const;
+
+export function FallbackMapView({
+  selectedShelterId,
+  onSelectShelter,
+  onOpenShelter,
+  mapStatusLabel = "임시 지도 · 네이버 지도 API 키가 없거나 로드되지 않아 임시 지도를 표시합니다."
+}: Props) {
+  const selectedShelter =
+    mockShelters.find((shelter) => shelter.id === selectedShelterId) ?? mockShelters[0];
+
+  return (
+    <View style={styles.shell}>
+      <View style={styles.mapHeader}>
+        <Text style={styles.mapStatus}>{mapStatusLabel}</Text>
+        <Text style={styles.mapScale}>성북구 종암동 주변</Text>
+      </View>
+      <View style={styles.mapCanvas}>
+        <View style={[styles.road, styles.roadOne]} />
+        <View style={[styles.road, styles.roadTwo]} />
+        <View style={[styles.road, styles.roadThree]} />
+        <View style={[styles.park, styles.parkOne]} />
+        <View style={[styles.park, styles.parkTwo]} />
+        <View style={[styles.building, styles.buildingOne]} />
+        <View style={[styles.building, styles.buildingTwo]} />
+        <View style={[styles.building, styles.buildingThree]} />
+        <View style={styles.currentMarker}>
+          <View style={styles.currentMarkerCore} />
+        </View>
+        {mockShelters.map((shelter, index) => {
+          const selected = shelter.id === selectedShelter.id;
+          const recommended = shelter.id === "shelter-1";
+
+          return (
+            <Pressable
+              key={shelter.id}
+              style={[
+                styles.marker,
+                markerPositions[index],
+                { backgroundColor: markerColors[shelter.type] },
+                recommended && styles.recommendedMarker,
+                selected && styles.selectedMarker
+              ]}
+              onPress={() => onSelectShelter(shelter.id)}
+            >
+              <Text style={styles.markerText}>{index + 1}</Text>
+            </Pressable>
+          );
+        })}
+        <View style={styles.zoomBox}>
+          <Text style={styles.zoomText}>+</Text>
+          <View style={styles.zoomDivider} />
+          <Text style={styles.zoomText}>-</Text>
+        </View>
+      </View>
+      <Pressable style={styles.placeCard} onPress={() => onOpenShelter(selectedShelter.id)}>
+        <View style={styles.placeTitleRow}>
+          <Text style={styles.placeName}>{selectedShelter.name}</Text>
+          <Text style={styles.recommendBadge}>
+            {selectedShelter.id === "shelter-1" ? "추천" : shelterTypeLabels[selectedShelter.type]}
+          </Text>
+        </View>
+        <Text style={styles.placeMeta}>
+          {selectedShelter.address} · 도보 {selectedShelter.walkMinutes}분 ·{" "}
+          {selectedShelter.isOpen ? "운영 중" : "운영 종료"}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  shell: {
+    borderRadius: 18,
+    overflow: "hidden",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: colors.line
+  },
+  mapHeader: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    right: 10,
+    zIndex: 2,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8
+  },
+  mapStatus: {
+    flex: 1,
+    color: colors.blue,
+    backgroundColor: "#ffffff",
+    borderRadius: 999,
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  mapScale: {
+    color: colors.text,
+    backgroundColor: "#ffffff",
+    borderRadius: 999,
+    overflow: "hidden",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  mapCanvas: {
+    height: 390,
+    backgroundColor: "#dff3e8"
+  },
+  road: {
+    position: "absolute",
+    backgroundColor: "#ffffff",
+    borderColor: "#d1d5db",
+    borderWidth: 1
+  },
+  roadOne: {
+    width: "120%",
+    height: 34,
+    top: 150,
+    left: -28,
+    transform: [{ rotate: "-16deg" }]
+  },
+  roadTwo: {
+    width: 34,
+    height: "120%",
+    top: -30,
+    left: 172,
+    transform: [{ rotate: "20deg" }]
+  },
+  roadThree: {
+    width: "92%",
+    height: 24,
+    bottom: 70,
+    left: 18,
+    transform: [{ rotate: "9deg" }]
+  },
+  park: {
+    position: "absolute",
+    backgroundColor: "#bbf7d0",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#86efac"
+  },
+  parkOne: {
+    width: 105,
+    height: 72,
+    bottom: 102,
+    left: 28
+  },
+  parkTwo: {
+    width: 78,
+    height: 58,
+    top: 46,
+    right: 38
+  },
+  building: {
+    position: "absolute",
+    backgroundColor: "#e5e7eb",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#cbd5e1"
+  },
+  buildingOne: {
+    width: 92,
+    height: 72,
+    top: 46,
+    left: 34
+  },
+  buildingTwo: {
+    width: 118,
+    height: 82,
+    bottom: 42,
+    right: 28
+  },
+  buildingThree: {
+    width: 86,
+    height: 62,
+    top: 205,
+    left: 132
+  },
+  currentMarker: {
+    position: "absolute",
+    top: "49%",
+    left: "47%",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(37, 99, 235, 0.18)",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  currentMarkerCore: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.blue,
+    borderWidth: 3,
+    borderColor: "#ffffff"
+  },
+  marker: {
+    position: "absolute",
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#ffffff"
+  },
+  recommendedMarker: {
+    borderColor: "#facc15"
+  },
+  selectedMarker: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 4,
+    borderColor: "#facc15",
+    transform: [{ translateX: -5 }, { translateY: -5 }]
+  },
+  markerText: {
+    color: "#ffffff",
+    fontWeight: "900"
+  },
+  zoomBox: {
+    position: "absolute",
+    right: 12,
+    top: 92,
+    width: 38,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: colors.line
+  },
+  zoomText: {
+    color: colors.text,
+    textAlign: "center",
+    lineHeight: 34,
+    fontSize: 19,
+    fontWeight: "900"
+  },
+  zoomDivider: {
+    height: 1,
+    backgroundColor: colors.line
+  },
+  placeCard: {
+    margin: 10,
+    padding: 13,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: colors.line
+  },
+  placeTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  placeName: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: "900"
+  },
+  recommendBadge: {
+    color: colors.blue,
+    backgroundColor: colors.blueSoft,
+    borderRadius: 999,
+    overflow: "hidden",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  placeMeta: {
+    color: colors.muted,
+    marginTop: 5,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700"
+  }
+});

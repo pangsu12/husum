@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "휴숨",
+    "slug": "hyusum-mvp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": ["ios", "android", "web"],
+    "userInterfaceStyle": "light",
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

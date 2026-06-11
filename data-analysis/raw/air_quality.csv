@@ -1,0 +1,16 @@
+﻿datetime,region,station,pm10,pm25,ozone,air_quality_index,air_risk_score,source
+2026-06-06 18:00,대전,읍내동,16.0,8.0,0.068,82.0,23.8,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,문평동,18.0,12.0,0.069,83.0,25.9,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,문창동,12.0,5.0,0.073,86.0,23.0,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,구성동,11.0,10.0,0.071,0.0,17.7,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,노은동,6.0,3.0,0.065,80.0,19.4,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,상대동(대전),13.0,3.0,0.067,82.0,21.1,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,관평동,10.0,6.0,0.064,79.0,21.1,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,지족동,13.0,5.0,0.061,76.0,20.4,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,대흥동1,19.0,16.0,0.054,71.0,24.2,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,성남동1,17.0,14.0,0.068,82.0,26.3,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,대성동,9.0,7.0,0.061,76.0,20.5,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,정림동,13.0,2.0,0.07,84.0,21.4,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,둔산동,18.0,8.0,0.071,84.0,24.8,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,월평동,16.0,8.0,0.059,75.0,21.7,getCtprvnRltmMesureDnsty
+2026-06-06 18:00,대전,비래동,6.0,6.0,0.064,79.0,20.4,getCtprvnRltmMesureDnsty
