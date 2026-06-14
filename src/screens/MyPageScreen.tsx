@@ -24,6 +24,7 @@ export function MyPageScreen({ navigation }: Props) {
         <Text style={[sharedStyles.body, { marginTop: 8 }]}>
           선택한 조건은 쉼터 추천 점수에 반영됩니다.
         </Text>
+        <Text style={styles.activeNotice}>현재 맞춤 조건이 추천에 반영 중입니다.</Text>
       </View>
 
       <View style={sharedStyles.card}>
@@ -74,6 +75,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "900",
     marginTop: 4
+  },
+  activeNotice: {
+    alignSelf: "flex-start",
+    color: "#047857",
+    backgroundColor: "#dcfce7",
+    borderRadius: 999,
+    overflow: "hidden",
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    fontWeight: "900"
   },
   tagWrap: {
     flexDirection: "row",

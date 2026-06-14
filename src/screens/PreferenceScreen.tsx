@@ -1,5 +1,5 @@
-import { ReactNode, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ReactNode, useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
   preferenceTags,
@@ -33,6 +33,14 @@ export function PreferenceScreen() {
   const [selectedRoute, setSelectedRoute] = useState<NonNullable<UserPreferences["routePreference"]>>(
     preferences.routePreference ?? "accessible"
   );
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!saved) return undefined;
+
+    const timer = setTimeout(() => setSaved(false), 3000);
+    return () => clearTimeout(timer);
+  }, [saved]);
 
   const toggleTag = (value: string) => {
     setSelectedTags((current) =>
@@ -42,7 +50,7 @@ export function PreferenceScreen() {
 
   const save = () => {
     setPreferences({ tags: selectedTags, routePreference: selectedRoute });
-    Alert.alert("맞춤 설정 저장", "선택한 조건을 쉼터 추천 점수에 반영합니다.");
+    setSaved(true);
   };
 
   return (
@@ -97,8 +105,15 @@ export function PreferenceScreen() {
       </View>
 
       <Pressable style={sharedStyles.primaryButton} onPress={save}>
-        <Text style={sharedStyles.primaryButtonText}>맞춤 설정 저장</Text>
+        <Text style={sharedStyles.primaryButtonText}>{saved ? "저장 완료" : "맞춤 설정 저장"}</Text>
       </Pressable>
+
+      {saved ? (
+        <View style={styles.savedBox}>
+          <Text style={styles.savedTitle}>맞춤 설정이 저장되었습니다.</Text>
+          <Text style={styles.savedText}>홈과 지도 추천에 바로 적용됩니다.</Text>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -155,5 +170,24 @@ const styles = StyleSheet.create({
   },
   optionTextActive: {
     color: colors.blue
+  },
+  savedBox: {
+    borderRadius: 14,
+    padding: 13,
+    backgroundColor: "#dcfce7",
+    borderWidth: 1,
+    borderColor: "#86efac"
+  },
+  savedTitle: {
+    color: "#047857",
+    fontSize: 15,
+    fontWeight: "900"
+  },
+  savedText: {
+    color: colors.text,
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "800"
   }
 });

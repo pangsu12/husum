@@ -54,6 +54,12 @@ export function mapShelterApiRecord(record: ApiRecord, index: number): Shelter {
   const latitude = pickNumber(record, ["LA", "LAT", "latitude", "lat"], 37.6025 + index * 0.001);
   const longitude = pickNumber(record, ["LO", "LON", "longitude", "lng"], 127.0329 + index * 0.001);
   const capacity = pickNumber(record, ["USE_PSBL_NMPR", "capacity"], 0);
+  const airConditionerCount = pickNumber(
+    record,
+    ["AIRCON_CNT", "AIR_CONDITIONER_CNT", "AIR_COND_CNT", "airConditionerCount", "airconCount"],
+    Number.NaN
+  );
+  const fanCount = pickNumber(record, ["FAN_CNT", "fanCount", "ELECTRIC_FAN_CNT"], Number.NaN);
 
   return {
     id: `api-shelter-${index}-${name}`,
@@ -64,6 +70,8 @@ export function mapShelterApiRecord(record: ApiRecord, index: number): Shelter {
     walkMinutes: Math.max(3, Math.round((250 + index * 80) / 75)),
     operatingHours: pick(record, ["WKDAY_OPER_BEGIN_TIME", "OPER_TIME", "operatingHours"], "확인 필요"),
     isOpen: true,
+    airConditionerCount: Number.isFinite(airConditionerCount) ? airConditionerCount : undefined,
+    fanCount: Number.isFinite(fanCount) ? fanCount : undefined,
     crowdLevel: "medium",
     coolingStatus: "weak",
     heatingStatus: "none",

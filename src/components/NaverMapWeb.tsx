@@ -13,6 +13,9 @@ type Props = {
   currentLocation?: Coordinates;
   departureLocation?: Coordinates;
   mapCenter?: Coordinates;
+  focusTarget?: Coordinates;
+  focusVersion?: number;
+  selectedMarkerLabel?: string;
   regionLabel?: string;
   onSelectShelter: (shelterId: string) => void;
   onOpenShelter: (shelterId: string) => void;
@@ -71,10 +74,11 @@ function hasValidCoordinates(shelter: Shelter) {
 }
 
 function markerContent(color: string, selected = false, label?: string) {
-  const size = selected ? 34 : 26;
+  const size = selected ? 46 : 26;
   const border = selected ? "#facc15" : "#ffffff";
+  const fontSize = label && label.length > 1 ? 10 : 11;
   const text = label
-    ? `<span style="color:#fff;font-size:11px;font-weight:900;line-height:${size - 8}px;">${label}</span>`
+    ? `<span style="color:#fff;font-size:${fontSize}px;font-weight:900;line-height:${size - 8}px;">${label}</span>`
     : "";
 
   return `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${color};border:4px solid ${border};box-shadow:0 5px 14px rgba(15,23,42,.28);">${text}</div>`;
@@ -98,6 +102,9 @@ export function NaverMapWeb({
   currentLocation = DEFAULT_LOCATION,
   departureLocation,
   mapCenter,
+  focusTarget,
+  focusVersion = 0,
+  selectedMarkerLabel = "도착지",
   regionLabel = "현재 위치",
   onSelectShelter,
   onOpenShelter
@@ -110,7 +117,7 @@ export function NaverMapWeb({
   );
 
   const selectedShelter = useMemo(
-    () => shelters.find((shelter) => shelter.id === selectedShelterId) ?? shelters[0] ?? mockShelters[0],
+    () => shelters.find((shelter) => shelter.id === selectedShelterId) ?? shelters[0],
     [selectedShelterId, shelters]
   );
 
@@ -163,16 +170,11 @@ export function NaverMapWeb({
     const maps = window.naver.maps;
     const validShelters = shelters.filter(hasValidCoordinates);
 
-    if (validShelters.length === 0) {
-      setStatus("sdk-failed");
-      return;
-    }
-
     try {
       markerRefs.current.forEach((marker) => marker.setMap?.(null));
       markerRefs.current = [];
 
-      const centerPoint = mapCenter ?? departureLocation ?? currentLocation;
+      const centerPoint = focusTarget ?? mapCenter ?? currentLocation;
       const center = new maps.LatLng(centerPoint.latitude, centerPoint.longitude);
       const map =
         mapRef.current ??
@@ -210,15 +212,16 @@ export function NaverMapWeb({
       }
 
       validShelters.forEach((shelter, index) => {
-        const selected = shelter.id === selectedShelter.id;
+        const selected = shelter.id === selectedShelter?.id;
         const recommended = shelter.name === RECOMMENDED_SHELTER_NAME || index === 0;
+        const markerLabel = selected ? selectedMarkerLabel : undefined;
         const marker = new maps.Marker({
           position: new maps.LatLng(shelter.latitude, shelter.longitude),
           map,
           title: shelter.name,
           icon: {
-            content: markerContent(recommended ? "#f59e0b" : "#16a34a", selected || recommended),
-            anchor: new maps.LatLng(selected ? 17 : 13, selected ? 17 : 13)
+            content: markerContent(selected ? "#ef4444" : recommended ? "#f59e0b" : "#16a34a", selected || recommended, markerLabel),
+            anchor: new maps.LatLng(selected ? 23 : 13, selected ? 23 : 13)
           }
         });
 
@@ -232,7 +235,7 @@ export function NaverMapWeb({
     } catch {
       setStatus("sdk-failed");
     }
-  }, [currentLocation, departureLocation, mapCenter, onSelectShelter, selectedShelter, shelters, status]);
+  }, [currentLocation, departureLocation, focusTarget, focusVersion, mapCenter, onSelectShelter, selectedShelter, shelters, status]);
 
   if (status === "sdk-failed" || status === "client-id-missing") {
     return (
@@ -241,6 +244,9 @@ export function NaverMapWeb({
         selectedShelterId={selectedShelterId}
         currentLocation={currentLocation}
         departureLocation={departureLocation}
+        focusTarget={focusTarget}
+        focusVersion={focusVersion}
+        selectedMarkerLabel={selectedMarkerLabel}
         onSelectShelter={onSelectShelter}
         onOpenShelter={onOpenShelter}
         mapStatusLabel={getMapStatusLabel(status, regionLabel)}

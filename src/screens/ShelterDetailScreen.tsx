@@ -11,6 +11,7 @@ import {
   calculateShelterScore,
   getShelterRecommendationReasons
 } from "../utils/recommendShelters";
+import { getFacilityCountLabel } from "../utils/shelterStatus";
 import {
   comfortLabel,
   crowdLabel,
@@ -38,6 +39,7 @@ export function ShelterDetailScreen({ navigation, route }: Props) {
   const displayScore = getDisplayScore(score);
   const reasons = getShelterRecommendationReasons(shelter, preferences);
   const favorite = isFavorite(shelter.id);
+  const facilityCountLabel = getFacilityCountLabel(shelter);
 
   const toggle = () => {
     toggleFavorite(shelter.id);
@@ -48,7 +50,7 @@ export function ShelterDetailScreen({ navigation, route }: Props) {
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
       <View style={sharedStyles.elevatedCard}>
         <View style={styles.summaryGrid}>
-          <Summary label={openLabel(shelter.isOpen)} tone="green" />
+          <Summary label={openLabel(shelter)} tone="green" />
           <Summary label={`도보 ${shelter.walkMinutes}분`} tone="blue" />
           <Summary label={comfortLabel(shelter.coolingStatus)} tone="blue" />
           <Summary label={`혼잡도 ${crowdLabel(shelter.crowdLevel)}`} tone="gray" />
@@ -77,7 +79,7 @@ export function ShelterDetailScreen({ navigation, route }: Props) {
             })
           }
         >
-          <Text style={sharedStyles.primaryButtonText}>경로 보기</Text>
+          <Text style={sharedStyles.primaryButtonText}>지도에서 확인</Text>
         </Pressable>
         <Pressable
           style={[sharedStyles.secondaryButton, styles.actionButton]}
@@ -100,7 +102,7 @@ export function ShelterDetailScreen({ navigation, route }: Props) {
 
       <InfoSection title="상태 정보">
         <View style={styles.statusWrap}>
-          <StatusPill label={openLabel(shelter.isOpen)} />
+          <StatusPill label={openLabel(shelter)} />
           <StatusPill label={comfortLabel(shelter.coolingStatus)} tone="blue" />
           <StatusPill label={comfortLabel(shelter.heatingStatus, "heating")} tone="orange" />
           <StatusPill label={`혼잡도 ${crowdLabel(shelter.crowdLevel)}`} tone="gray" />
@@ -111,6 +113,7 @@ export function ShelterDetailScreen({ navigation, route }: Props) {
         <Detail label="물 제공" value={shelter.hasWater ? "가능" : "확인 필요"} />
         <Detail label="휠체어 접근" value={shelter.wheelchairAccessible ? "가능" : "확인 필요"} />
         <Detail label="반려동물 동반" value={shelter.petAllowed ? "가능" : "제한"} />
+        <Detail label="냉방기·선풍기" value={facilityCountLabel || "시설 정보 확인 중"} />
         <Detail label="시설 유형" value={shelterTypeLabels[shelter.type]} />
       </InfoSection>
 

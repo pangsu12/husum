@@ -3,6 +3,7 @@ import { createContext, ReactNode, useContext, useEffect, useMemo, useState } fr
 import { ConcreteRegionKey, useLocationSelection } from "./LocationContext";
 import { fetchCurrentWeather, WeatherGrid } from "../services/weatherApi";
 import { fetchHeatAlertStatus, HeatAlertStatus } from "../services/weatherAlertApi";
+import { calculateHeatIllnessRisk } from "../utils/heatIllnessRisk";
 
 export type HeatRiskLevel = "낮음" | "보통" | "높음" | "매우 높음";
 
@@ -101,7 +102,7 @@ function toWeatherState(config: RegionalWeatherConfig): WeatherState {
 }
 
 export function WeatherProvider({ children }: { children: ReactNode }) {
-  const { concreteRegion } = useLocationSelection();
+  const { concreteRegion, effectiveRegionOption } = useLocationSelection();
   const [weather, setWeather] = useState<WeatherState>(() => toWeatherState(regionalWeatherDefaults.seoul));
 
   useEffect(() => {
@@ -121,7 +122,14 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         setWeather({
           ...fallbackWeather,
           heatAlertStatus,
-          heatRiskLevel: alertStatus?.heatRiskLevel ?? fallbackWeather.heatRiskLevel,
+          heatRiskLevel:
+            alertStatus?.heatRiskLevel ??
+            calculateHeatIllnessRisk({
+              feelsLikeTemperature: fallbackWeather.feelsLikeTemperature,
+              humidity: fallbackWeather.humidity,
+              heatAlertStatus,
+              vulnerabilityScore: effectiveRegionOption.analysisScore
+            }).level,
           source: alertStatus ? "api" : "default"
         });
         return;
@@ -134,7 +142,14 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         condition: currentWeather.condition,
         heatAlertStatus,
         heatRiskLevel:
-          alertStatus?.heatRiskLevel ?? getHeatRiskLevel(currentWeather.feelsLikeTemperature, heatAlertStatus),
+          alertStatus?.heatRiskLevel ??
+          calculateHeatIllnessRisk({
+            feelsLikeTemperature: currentWeather.feelsLikeTemperature,
+            humidity: currentWeather.humidity,
+            heatAlertStatus,
+            vulnerabilityScore: effectiveRegionOption.analysisScore
+          }).level ??
+          getHeatRiskLevel(currentWeather.feelsLikeTemperature, heatAlertStatus),
         source: "api"
       });
     });
@@ -142,7 +157,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, [concreteRegion]);
+  }, [concreteRegion, effectiveRegionOption.analysisScore]);
 
   const value = useMemo(() => weather, [weather]);
 

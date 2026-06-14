@@ -18,6 +18,8 @@ type ShelterSeed = {
   wheelchairAccessible?: boolean;
   petAllowed?: boolean;
   positiveReportRate?: number;
+  airConditionerCount?: number;
+  fanCount?: number;
 };
 
 function makeShelter(seed: ShelterSeed): Shelter {
@@ -30,6 +32,8 @@ function makeShelter(seed: ShelterSeed): Shelter {
     walkMinutes: Math.max(3, Math.round(seed.distanceMeters / 75)),
     operatingHours: "09:00~18:00",
     isOpen: true,
+    airConditionerCount: seed.airConditionerCount ?? (seed.coolingStatus === "weak" ? 2 : 3),
+    fanCount: seed.fanCount ?? (seed.coolingStatus === "weak" ? 2 : 4),
     crowdLevel: seed.crowdLevel ?? "medium",
     coolingStatus: seed.coolingStatus ?? "good",
     heatingStatus: "weak",

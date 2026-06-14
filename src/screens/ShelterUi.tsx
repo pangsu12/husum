@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { CrowdLevel, FacilityStatus, Shelter } from "../types/shelter";
+import { getFacilityCountLabel, getShelterOpenStatus } from "../utils/shelterStatus";
 import { colors } from "./sharedStyles";
 
 export function formatDistance(meters: number) {
@@ -8,8 +9,13 @@ export function formatDistance(meters: number) {
   return `${meters}m`;
 }
 
-export function openLabel(isOpen: boolean) {
-  return isOpen ? "운영 중" : "운영 확인 필요";
+export function openLabel(isOpenOrShelter: boolean | Pick<Shelter, "operatingHours" | "isOpen">, operatingHours?: string) {
+  if (typeof isOpenOrShelter === "boolean") {
+    if (operatingHours) return getShelterOpenStatus({ isOpen: isOpenOrShelter, operatingHours }).label;
+    return isOpenOrShelter ? "운영중" : "운영시간 정보 확인 필요";
+  }
+
+  return getShelterOpenStatus(isOpenOrShelter).label;
 }
 
 export function crowdLabel(level: CrowdLevel) {
@@ -42,11 +48,12 @@ export function formatRecommendationScore(score: number, rankOffset = 0) {
 
 export function availabilityTags(shelter: Shelter) {
   return [
-    openLabel(shelter.isOpen),
+    openLabel(shelter),
     `${formatDistance(shelter.distanceMeters)} · 도보 ${shelter.walkMinutes}분`,
     comfortLabel(shelter.coolingStatus),
+    getFacilityCountLabel(shelter),
     `혼잡도 ${crowdLabel(shelter.crowdLevel)}`
-  ];
+  ].filter(Boolean);
 }
 
 export function ScoreBar({ score, danger }: { score: number; danger?: boolean }) {

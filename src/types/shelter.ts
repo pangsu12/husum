@@ -15,6 +15,8 @@ export type Shelter = {
   walkMinutes: number;
   operatingHours: string;
   isOpen: boolean;
+  airConditionerCount?: number;
+  fanCount?: number;
   crowdLevel: CrowdLevel;
   coolingStatus: FacilityStatus;
   heatingStatus: FacilityStatus;

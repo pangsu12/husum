@@ -12,6 +12,9 @@ type Props = {
   selectedShelterId?: string;
   currentLocation?: Coordinates;
   departureLocation?: Coordinates;
+  focusTarget?: Coordinates;
+  focusVersion?: number;
+  selectedMarkerLabel?: string;
   onSelectShelter: (shelterId: string) => void;
   onOpenShelter: (shelterId: string) => void;
   mapStatusLabel?: string;
@@ -46,6 +49,9 @@ export function FallbackMapView({
   shelters = mockShelters,
   selectedShelterId,
   departureLocation,
+  focusTarget,
+  focusVersion,
+  selectedMarkerLabel = "도착지",
   onSelectShelter,
   onOpenShelter,
   mapStatusLabel,
@@ -53,12 +59,13 @@ export function FallbackMapView({
 }: Props) {
   const selectedShelter =
     shelters.find((shelter) => shelter.id === selectedShelterId) ?? shelters[0] ?? mockShelters[0];
+  const focusLabel = focusTarget || focusVersion ? "추천 쉼터 중심" : `${regionLabel} 주변`;
 
   return (
     <View style={styles.shell}>
       <View style={styles.mapHeader}>
         <Text style={styles.mapStatus}>{mapStatusLabel ?? `${regionLabel} 주변 쉼터를 표시하고 있습니다.`}</Text>
-        <Text style={styles.mapScale}>{regionLabel} 주변</Text>
+        <Text style={styles.mapScale}>{focusLabel}</Text>
       </View>
       <View style={styles.mapCanvas}>
         <View style={[styles.road, styles.roadOne]} />
@@ -93,7 +100,7 @@ export function FallbackMapView({
               ]}
               onPress={() => onSelectShelter(shelter.id)}
             >
-              <Text style={styles.markerText}>{index + 1}</Text>
+              <Text style={styles.markerText}>{selected ? selectedMarkerLabel : index + 1}</Text>
             </Pressable>
           );
         })}
@@ -112,7 +119,7 @@ export function FallbackMapView({
         </View>
         <Text style={styles.placeMeta}>
           {selectedShelter.address} · {formatDistance(selectedShelter.distanceMeters)} · 도보{" "}
-          {selectedShelter.walkMinutes}분 · {openLabel(selectedShelter.isOpen)}
+          {selectedShelter.walkMinutes}분 · {openLabel(selectedShelter)}
         </Text>
       </Pressable>
     </View>
@@ -278,15 +285,17 @@ const styles = StyleSheet.create({
     borderColor: "#facc15"
   },
   selectedMarker: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     borderWidth: 4,
     borderColor: "#facc15",
-    transform: [{ translateX: -5 }, { translateY: -5 }]
+    backgroundColor: colors.danger,
+    transform: [{ translateX: -10 }, { translateY: -10 }]
   },
   markerText: {
     color: "#ffffff",
+    fontSize: 10,
     fontWeight: "900"
   },
   zoomBox: {

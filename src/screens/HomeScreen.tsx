@@ -14,6 +14,8 @@ import {
   getRecommendedShelters,
   getShelterRecommendationReasons
 } from "../utils/recommendShelters";
+import { calculateHeatIllnessRisk } from "../utils/heatIllnessRisk";
+import { getFacilityCountLabel } from "../utils/shelterStatus";
 import {
   comfortLabel,
   crowdLabel,
@@ -45,13 +47,21 @@ export function HomeScreen({ navigation }: Props) {
   const { preferences, selectedTagLabels } = usePreferenceSettings();
   const { shelters } = useShelterData();
   const weather = useWeather();
-  const { selectedRegion, setSelectedRegion, regionLabel, surroundingLabel } = useLocationSelection();
+  const { selectedRegion, setSelectedRegion, regionLabel, surroundingLabel, analysisRegionLabel, effectiveRegionOption } =
+    useLocationSelection();
   const recommendedShelter = getRecommendedShelters(shelters, preferences)[0];
   const score = calculateShelterScore(recommendedShelter, preferences);
   const displayScore = getDisplayScore(score);
   const reasons = getShelterRecommendationReasons(recommendedShelter, preferences);
   const hasHeatAlert = weather.heatAlertStatus !== "none";
   const alertLabel = weather.heatAlertStatus === "warning" ? "폭염경보" : "폭염주의보";
+  const heatIllnessRisk = calculateHeatIllnessRisk({
+    feelsLikeTemperature: weather.feelsLikeTemperature,
+    humidity: weather.humidity,
+    heatAlertStatus: weather.heatAlertStatus,
+    vulnerabilityScore: effectiveRegionOption.analysisScore
+  });
+  const facilityCountLabel = getFacilityCountLabel(recommendedShelter);
 
   return (
     <ScrollView style={sharedStyles.screen} contentContainerStyle={sharedStyles.content}>
@@ -69,6 +79,9 @@ export function HomeScreen({ navigation }: Props) {
           <Text style={styles.riskBadge}>폭염 위험도 {weather.heatRiskLevel}</Text>
         </View>
         <Text style={styles.riskCopy}>{getRiskCopy(regionLabel, weather.heatRiskLevel)}</Text>
+        <Text style={styles.riskCopy}>
+          현재 {analysisRegionLabel}의 온열질환 위험: {heatIllnessRisk.level}
+        </Text>
 
         <RegionSelector selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} compact />
 
@@ -110,7 +123,7 @@ export function HomeScreen({ navigation }: Props) {
               <Text style={styles.scoreValue}>{formatRecommendationScore(score)}</Text>
             </View>
             <View style={styles.statusStack}>
-              <StatusPill label={openLabel(recommendedShelter.isOpen)} />
+              <StatusPill label={openLabel(recommendedShelter)} />
               <StatusPill label={comfortLabel(recommendedShelter.coolingStatus)} tone="blue" />
             </View>
           </View>
@@ -122,6 +135,9 @@ export function HomeScreen({ navigation }: Props) {
             <Info label="혼잡도" value={crowdLabel(recommendedShelter.crowdLevel)} />
             <Info label="물 제공" value={recommendedShelter.hasWater ? "가능" : "확인 필요"} />
           </View>
+          {facilityCountLabel ? (
+            <Text style={[sharedStyles.body, { marginTop: 10 }]}>{facilityCountLabel}</Text>
+          ) : null}
 
           <View style={styles.tagWrap}>
             {reasons.map((reason) => (
@@ -149,7 +165,7 @@ export function HomeScreen({ navigation }: Props) {
                 })
               }
             >
-              <Text style={sharedStyles.secondaryButtonText}>경로 보기</Text>
+              <Text style={sharedStyles.secondaryButtonText}>지도에서 확인</Text>
             </Pressable>
             <Pressable
               style={[styles.outlineButton, styles.flexButton]}

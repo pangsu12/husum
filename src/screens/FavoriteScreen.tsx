@@ -44,7 +44,7 @@ export function FavoriteScreen({ navigation }: Props) {
           <Text style={{ color: colors.text, fontSize: 17, fontWeight: "900" }}>{shelter.name}</Text>
           <Text style={[sharedStyles.muted, { marginTop: 6 }]}>
             {shelterTypeLabels[shelter.type]} · {formatDistance(shelter.distanceMeters)} · 도보{" "}
-            {shelter.walkMinutes}분 · {openLabel(shelter.isOpen)}
+            {shelter.walkMinutes}분 · {openLabel(shelter)}
           </Text>
         </Pressable>
       ))}

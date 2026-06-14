@@ -81,8 +81,10 @@ type LocationContextValue = {
   selectedRegion: AppRegionKey;
   setSelectedRegion: (region: AppRegionKey) => void;
   selectedRegionOption: RegionOption;
+  effectiveRegionOption: RegionOption;
   concreteRegion: ConcreteRegionKey;
   regionLabel: string;
+  analysisRegionLabel: string;
   surroundingLabel: string;
   currentLocation: Coordinates;
   moveToCurrentLocation: () => void;
@@ -92,6 +94,35 @@ const LocationContext = createContext<LocationContextValue | undefined>(undefine
 
 function getRegionOption(region: AppRegionKey) {
   return regionOptions.find((option) => option.key === region) ?? regionOptions[0];
+}
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function getDistanceMeters(origin: Coordinates, destination: Coordinates) {
+  const earthRadius = 6371000;
+  const deltaLatitude = toRadians(destination.latitude - origin.latitude);
+  const deltaLongitude = toRadians(destination.longitude - origin.longitude);
+  const startLatitude = toRadians(origin.latitude);
+  const endLatitude = toRadians(destination.latitude);
+  const a =
+    Math.sin(deltaLatitude / 2) * Math.sin(deltaLatitude / 2) +
+    Math.cos(startLatitude) * Math.cos(endLatitude) * Math.sin(deltaLongitude / 2) * Math.sin(deltaLongitude / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadius * c;
+}
+
+function getNearestConcreteRegion(location: Coordinates) {
+  const concreteOptions = regionOptions.filter((option) => option.key !== "current");
+
+  return concreteOptions.reduce((nearest, option) => {
+    const nearestDistance = getDistanceMeters(location, nearest);
+    const optionDistance = getDistanceMeters(location, option);
+
+    return optionDistance < nearestDistance ? option : nearest;
+  }, concreteOptions[0]);
 }
 
 export function LocationProvider({ children }: { children: ReactNode }) {
@@ -118,6 +149,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const value = useMemo<LocationContextValue>(() => {
     const selectedRegionOption = getRegionOption(selectedRegion);
     const regionLabel = selectedRegionOption.label;
+    const effectiveRegionOption =
+      selectedRegion === "current" && browserLocation
+        ? getNearestConcreteRegion(browserLocation)
+        : selectedRegionOption;
     const currentLocation =
       selectedRegion === "current" && browserLocation
         ? browserLocation
@@ -130,8 +165,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       selectedRegion,
       setSelectedRegion,
       selectedRegionOption,
-      concreteRegion: selectedRegionOption.concreteRegion,
+      effectiveRegionOption,
+      concreteRegion: effectiveRegionOption.concreteRegion,
       regionLabel,
+      analysisRegionLabel: effectiveRegionOption.shortLabel,
       surroundingLabel: `${regionLabel} 주변`,
       currentLocation,
       moveToCurrentLocation

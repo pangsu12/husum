@@ -1,6 +1,7 @@
 import { preferenceTags } from "../contexts/PreferenceContext";
 import { crowdLevelLabels, facilityStatusLabels } from "../data/mockShelters";
 import { Shelter, UserPreferences } from "../types/shelter";
+import { getShelterOpenStatus } from "./shelterStatus";
 
 export type RecommendationOrigin = {
   latitude: number;
@@ -62,8 +63,9 @@ export function calculateShelterScore(
   origin?: RecommendationOrigin
 ) {
   const target = getShelterWithOriginDistance(shelter, origin);
+  const openStatus = getShelterOpenStatus(target);
   let distanceScore = Math.max(0, Math.round(28 - target.distanceMeters / 35));
-  let openScore = target.isOpen ? 20 : 0;
+  let openScore = openStatus.isOpen ? 20 : openStatus.phase === "before" ? 5 : 0;
   let coolingScore = facilityScore[target.coolingStatus];
   let crowdLevelScore = crowdScore[target.crowdLevel];
   let accessibilityScore = target.wheelchairAccessible ? 10 : 3;
@@ -88,7 +90,7 @@ export function calculateShelterScore(
 
   if (hasPreference(preferences, preferenceTags.senior) || hasPreference(preferences, preferenceTags.pregnant)) {
     distanceScore += target.distanceMeters <= 400 ? 7 : 0;
-    openScore += target.isOpen ? 5 : 0;
+    openScore += openStatus.isOpen ? 5 : 0;
     accessibilityScore += target.wheelchairAccessible ? 5 : 0;
   }
 
@@ -127,21 +129,24 @@ export function getShelterRecommendationReasons(
   origin?: RecommendationOrigin
 ) {
   const target = getShelterWithOriginDistance(shelter, origin);
+  const openStatus = getShelterOpenStatus(target);
   const reasons: string[] = [];
 
-  if (target.distanceMeters <= 300) reasons.push("가까움");
-  if (target.isOpen) reasons.push("운영 중");
-  if (target.coolingStatus === "good") reasons.push("냉방 쾌적");
+  if (target.distanceMeters <= 300) reasons.push("출발지에서 가까움");
+  reasons.push(openStatus.isOpen ? "운영시간 확인" : openStatus.label);
+  if (target.coolingStatus === "good") reasons.push("냉방 상태 양호");
+  if (typeof target.airConditionerCount === "number" && target.airConditionerCount > 0) reasons.push("냉방기 보유");
+  if (typeof target.fanCount === "number" && target.fanCount > 0) reasons.push("선풍기 보유");
   if (target.crowdLevel === "low") reasons.push("혼잡도 낮음");
   if (target.hasWater) reasons.push("물 제공");
-  if (target.wheelchairAccessible) reasons.push("휠체어 접근 가능");
+  if (target.wheelchairAccessible) reasons.push("보행 접근성 좋음");
   if (target.petAllowed) reasons.push("반려동물 동반 가능");
 
   if (
     (hasPreference(preferences, preferenceTags.mobility) || hasPreference(preferences, preferenceTags.disabled)) &&
     target.wheelchairAccessible
   ) {
-    reasons.unshift("이동 조건 반영");
+    reasons.unshift("사용자 맞춤 조건 반영");
   }
   if (hasPreference(preferences, preferenceTags.infant) && target.hasWater && target.crowdLevel === "low") {
     reasons.unshift("영유아 동반 적합");
